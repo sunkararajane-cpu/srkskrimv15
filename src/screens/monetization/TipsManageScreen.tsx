@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Pencil } from 'lucide-react';
@@ -7,10 +7,34 @@ import { TIPS_CONFIG } from '../../lib/mock/monetizationMockData';
 export default function TipsManageScreen() {
   const navigate = useNavigate();
   const [active, setActive] = useState(TIPS_CONFIG.active);
-  const [amounts, setAmounts] = useState<number[]>(TIPS_CONFIG.suggestedAmounts);
-  const [message, setMessage] = useState(TIPS_CONFIG.message);
+  const [amounts, setAmounts] = useState<number[]>([]);
+  const [message, setMessage] = useState('');
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activeFlag = true;
+    const fetchTips = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (activeFlag) {
+          setActive(TIPS_CONFIG.active);
+          setAmounts(TIPS_CONFIG.suggestedAmounts);
+          setMessage(TIPS_CONFIG.message);
+        }
+      } catch (err: any) {
+        if (activeFlag) setError(err.message || 'Failed to load creator tips.');
+      } finally {
+        if (activeFlag) setLoading(false);
+      }
+    };
+    fetchTips();
+    return () => { activeFlag = false; };
+  }, []);
 
   const removeAmount = (i: number) => setAmounts((a) => a.filter((_, idx) => idx !== i));
   const addAmount = () => {
@@ -35,7 +59,19 @@ export default function TipsManageScreen() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+          <p className="text-sm text-gray-500 font-mono tracking-wider">RETRIEVING CREATOR TIPS CONFIG...</p>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <p className="text-red-400 font-bold mb-2">Sync Error</p>
+          <p className="text-white/60 text-xs mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-neon-purple text-white font-bold rounded-xl text-xs">Retry</button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
         {/* Master toggle */}
         <div className="bg-skrim-surface rounded-2xl border border-white/5 p-4 flex items-center justify-between">
           <div>
@@ -133,6 +169,7 @@ export default function TipsManageScreen() {
           </div>
         </div>
       </div>
+    )}
     </div>
   );
 }

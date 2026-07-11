@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { AUDIENCE_DATA, AUDIENCE_HEATMAP } from '../../lib/mock/monetizationMockData';
@@ -11,9 +11,31 @@ const AGE_BRACKETS: (keyof typeof AUDIENCE_DATA.age)[] = ['13-17', '18-24', '25-
 export function AudienceTab() {
   const navigate = useNavigate();
   const [showAllLocations, setShowAllLocations] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchAudience = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (active) setLoading(false);
+    };
+    fetchAudience();
+    return () => { active = false; };
+  }, []);
+
   const { gender, age, locations, peakOnline, followerGrowthChart, topFans, totalFollowers, activeFollowers, activePercent } = AUDIENCE_DATA;
 
   const visibleLocations = showAllLocations ? locations : locations.slice(0, 1);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+        <p className="text-sm text-gray-500 font-mono tracking-wider">COMPILING AUDIENCE DEMOGRAPHICS...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 flex flex-col gap-6">

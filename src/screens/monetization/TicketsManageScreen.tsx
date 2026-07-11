@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Share2, Pencil } from 'lucide-react';
@@ -6,9 +6,31 @@ import { TICKETS_CONFIG, TicketedEvent } from '../../lib/mock/monetizationMockDa
 
 export default function TicketsManageScreen() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<TicketedEvent[]>(TICKETS_CONFIG.events);
+  const [events, setEvents] = useState<TicketedEvent[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activeFlag = true;
+    const fetchTickets = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (activeFlag) {
+          setEvents(TICKETS_CONFIG.events);
+        }
+      } catch (err: any) {
+        if (activeFlag) setError(err.message || 'Failed to load live event tickets.');
+      } finally {
+        if (activeFlag) setLoading(false);
+      }
+    };
+    fetchTickets();
+    return () => { activeFlag = false; };
+  }, []);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
 
@@ -29,7 +51,19 @@ export default function TicketsManageScreen() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+          <p className="text-sm text-gray-500 font-mono tracking-wider">RETRIEVING LIVE EVENTS...</p>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <p className="text-red-400 font-bold mb-2">Sync Error</p>
+          <p className="text-white/60 text-xs mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-neon-purple text-white font-bold rounded-xl text-xs">Retry</button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
         <div className="text-center py-2">
           <span className="text-5xl block mb-3">🎟️</span>
           <p className="text-sm text-gray-400 max-w-[280px] mx-auto leading-relaxed">
@@ -69,6 +103,7 @@ export default function TicketsManageScreen() {
           )}
         </div>
       </div>
+    )}
 
       <AnimatePresence>{createOpen && <CreateEventSheet onClose={() => setCreateOpen(false)} onCreate={handleCreate} />}</AnimatePresence>
 

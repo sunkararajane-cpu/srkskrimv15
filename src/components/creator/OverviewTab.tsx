@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, Users, Radar, Heart, TrendingUp, TrendingDown, Lightbulb, Flame, ChevronRight } from 'lucide-react';
 import { OVERVIEW_DATA } from '../../lib/mock/monetizationMockData';
@@ -64,6 +64,27 @@ interface OverviewTabProps {
 
 export function OverviewTab({ rangeLabel, onViewAllContent, onSelectContent, hasData, onCreatePost }: OverviewTabProps) {
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchOverview = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (active) setLoading(false);
+    };
+    fetchOverview();
+    return () => { active = false; };
+  }, [rangeLabel]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+        <p className="text-sm text-gray-500 font-mono tracking-wider">LOADING OVERVIEW...</p>
+      </div>
+    );
+  }
 
   if (!hasData) {
     return (

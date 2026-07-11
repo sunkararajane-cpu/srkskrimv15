@@ -41,12 +41,17 @@ export default function HashtagScreen() {
   
   const [vibes, setVibes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'top' | 'recent'>('top');
 
   useEffect(() => {
+    let active = true;
     const fetchHashtagData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const allReels = await getReels();
+        if (!active) return;
         // Generate mock data since actual reels might not have this specific hashtag
         let hashtagReels = allReels.filter(r => 
           extractHashtags(r.caption || '').some(h => h.toLowerCase() === hashtag.toLowerCase())
@@ -64,12 +69,20 @@ export default function HashtagScreen() {
         }
 
         setVibes(hashtagReels);
-        setLoading(false);
-      } catch {
-        setLoading(false);
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || "Failed to load hashtag feeds");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
     fetchHashtagData();
+    return () => {
+      active = false;
+    };
   }, [hashtag]);
 
   const topVibes = [...vibes].sort((a, b) => (b.pulseCount || 0) - (a.pulseCount || 0));
@@ -101,6 +114,12 @@ export default function HashtagScreen() {
       {loading ? (
         <div className="p-4 flex flex-col items-center justify-center flex-1">
            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+        </div>
+      ) : error ? (
+        <div className="p-8 flex flex-col items-center justify-center text-center flex-1">
+           <p className="text-red-400 font-bold mb-2">Error Loading Hashtag</p>
+           <p className="text-white/60 text-xs mb-4">{error}</p>
+           <button onClick={() => window.location.reload()} className="px-4 py-2 bg-purple-600 rounded-xl text-xs font-bold text-white">Retry</button>
         </div>
       ) : (
         <div className="flex flex-col">

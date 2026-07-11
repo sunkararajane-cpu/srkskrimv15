@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TrendingUp, ChevronRight, Download, X } from 'lucide-react';
 import { EARNINGS_DATA } from '../../lib/mock/monetizationMockData';
@@ -16,8 +16,29 @@ export function EarningsTab({ onExploreMonetization, hasEarnings }: EarningsTabP
   const [showAllPayouts, setShowAllPayouts] = useState(false);
   const [payoutSheetOpen, setPayoutSheetOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const counter = useCountUp(EARNINGS_DATA.totalThisMonth, 1000);
+  useEffect(() => {
+    let active = true;
+    const fetchEarnings = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (active) setLoading(false);
+    };
+    fetchEarnings();
+    return () => { active = false; };
+  }, []);
+
+  const counter = useCountUp(loading ? 0 : EARNINGS_DATA.totalThisMonth, 1000);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#D4AF37] animate-spin mb-4" />
+        <p className="text-sm text-gray-500 font-mono tracking-wider">RETRIEVING EARNINGS & PAYOUTS...</p>
+      </div>
+    );
+  }
 
   if (!hasEarnings) {
     return (

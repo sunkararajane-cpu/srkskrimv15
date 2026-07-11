@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { callEngine } from "../lib/e2e/calling/callEngine";
-import { getChatById } from "../lib/mock/mockChatDirectory";
+import { getChatByIdAsync } from "../lib/mock/mockChatDirectory";
 
 export interface CallContact {
   id: string;
@@ -278,15 +278,19 @@ function wireCallEngineOnce() {
     });
   });
 
-  callEngine.on("incomingCall", ({ from, type }: { from: string; type: "audio" | "video" }) => {
+  callEngine.on("incomingCall", async ({ from, type }: { from: string; type: "audio" | "video" }) => {
     const s = useCallStore.getState();
     if (s.isActive) return; // already on a call — real app would send "busy"
-    const chat = getChatById(from);
-    s.startCall(
-      type,
-      { id: from, name: chat.displayName, avatar: chat.avatar, online: true },
-      true,
-    );
+    try {
+      const chat = await getChatByIdAsync(from);
+      s.startCall(
+        type,
+        { id: from, name: chat.displayName, avatar: chat.avatar, online: true },
+        true,
+      );
+    } catch (err) {
+      console.error("Failed to load chat lookup for incoming call:", err);
+    }
   });
 }
 

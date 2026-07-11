@@ -55,6 +55,7 @@ export function ImmersivePostViewer({ initialIndex, type, urls, user, users, onC
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [comments, setComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [commentInput, setCommentInput] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const { savedPosts, savePost, unsavePost } = useSavedStore();
@@ -81,15 +82,26 @@ export function ImmersivePostViewer({ initialIndex, type, urls, user, users, onC
   const totalCommentsCount = currentPost?.comments || 0;
 
   useEffect(() => {
+    let active = true;
     const fetchComments = async () => {
-      const rawComments = await getPostComments(currentPostId, totalCommentsCount);
-      const loadedComments = rawComments.map((c: any) => ({
-        ...c,
-        username: c.username || (c.handle.startsWith('@') ? c.handle : `@${c.handle}`),
-      }));
-      setComments(loadedComments);
+      setLoadingComments(true);
+      try {
+        const rawComments = await getPostComments(currentPostId, totalCommentsCount);
+        if (active) {
+          const loadedComments = rawComments.map((c: any) => ({
+            ...c,
+            username: c.username || (c.handle.startsWith('@') ? c.handle : `@${c.handle}`),
+          }));
+          setComments(loadedComments);
+        }
+      } catch (err) {
+        console.error('Error fetching comments:', err);
+      } finally {
+        if (active) setLoadingComments(false);
+      }
     };
     fetchComments();
+    return () => { active = false; };
   }, [currentPostId, totalCommentsCount]);
 
   const handleSubmitComment = async () => {
@@ -966,7 +978,12 @@ export function ImmersivePostViewer({ initialIndex, type, urls, user, users, onC
               </div>
 
               <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
-                {comments.map((comment) => (
+                {loadingComments ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-3" />
+                    <p className="text-[11px] text-gray-500 font-mono tracking-wider">RETRIEVING COMMENTS...</p>
+                  </div>
+                ) : comments.map((comment) => (
                   <div key={comment.id} className="flex gap-3">
                     <img 
                       src={comment.avatar || 'https://i.pravatar.cc/150' || null} 

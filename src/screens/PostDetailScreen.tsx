@@ -17,25 +17,74 @@ export default function PostDetailScreen() {
   const currentUser = useCurrentUser();
   const [post, setPost] = useState<any>(null);
   const [notFound, setNotFound] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!postId) {
-      setNotFound(true);
-      return;
-    }
-    const match = postId.match(/^post_stable_(\d+)$/);
-    if (!match) {
-      setNotFound(true);
-      return;
-    }
-    const idx = parseInt(match[1], 10);
-    try {
-      const generated = generateSinglePost('chill', idx);
-      setPost(generated);
-    } catch {
-      setNotFound(true);
-    }
+    let active = true;
+    const fetchPost = async () => {
+      if (!postId) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      const match = postId.match(/^post_stable_(\d+)$/);
+      if (!match) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      const idx = parseInt(match[1], 10);
+      setLoading(true);
+      setError(null);
+      try {
+        // Simulate network delay
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        if (!active) return;
+        const generated = generateSinglePost('chill', idx);
+        if (!generated) {
+          setNotFound(true);
+        } else {
+          setPost(generated);
+        }
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || "Failed to fetch post details");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchPost();
+    return () => {
+      active = false;
+    };
   }, [postId]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white p-6">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+        <p className="text-sm text-gray-400">Loading orbital feed transmission...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-black text-white gap-4 p-6 text-center">
+        <span className="text-5xl">⚠️</span>
+        <h2 className="text-lg font-bold">Failed to load post</h2>
+        <p className="text-sm text-gray-400 max-w-xs">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-3 bg-neon-purple text-white font-bold rounded-xl text-sm mt-2">
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (

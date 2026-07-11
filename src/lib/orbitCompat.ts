@@ -32,4 +32,16 @@ export function getCompatibility(myInterests: string[], myMood: MoodStatus, user
   return { score, sharedInterests };
 }
 
+export async function getCompatibilityAsync(
+  myInterests: string[],
+  myMood: MoodStatus,
+  user: OrbitUser
+): Promise<{
+  score: number;
+  sharedInterests: string[];
+}> {
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  return getCompatibility(myInterests, myMood, user);
+}
+
 export const DEFAULT_MY_INTERESTS = ['AI', 'Music', 'Travel', 'Cricket', 'Coding'];

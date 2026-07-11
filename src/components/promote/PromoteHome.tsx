@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Megaphone, ChevronRight } from 'lucide-react';
-import { CAMPAIGNS, SPEND_SUMMARY } from '../../lib/mock/monetizationMockData';
+import { CAMPAIGNS, SPEND_SUMMARY, Campaign } from '../../lib/mock/monetizationMockData';
 import { formatCompact } from '../../hooks/useCountUp';
 
 const STATUS_META: Record<string, { label: string; color: string; dot?: boolean }> = {
@@ -14,7 +14,49 @@ interface PromoteHomeProps {
 }
 
 export function PromoteHome({ onCreateAd, onViewCampaignDashboard }: PromoteHomeProps) {
-  const activeCampaigns = CAMPAIGNS.filter((c) => c.status === 'active' || c.status === 'paused');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCampaigns = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (active) {
+          setCampaigns(CAMPAIGNS);
+        }
+      } catch (err: any) {
+        if (active) setError(err.message || 'Failed to load campaigns.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchCampaigns();
+    return () => { active = false; };
+  }, []);
+
+  const activeCampaigns = campaigns.filter((c) => c.status === 'active' || c.status === 'paused');
+
+  if (loading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center">
+        <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-3" />
+        <p className="text-xs text-gray-500 font-mono">LOADING AD MANAGER...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-red-400 text-sm mb-3">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-3 py-1.5 bg-neon-purple text-white rounded-lg text-xs">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 flex flex-col gap-6">

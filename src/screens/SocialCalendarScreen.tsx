@@ -309,14 +309,42 @@ type Tab = 'upcoming' | 'today' | 'all';
 
 export default function SocialCalendarScreen() {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<CalendarEvent[]>(loadEvents);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('upcoming');
   const [editTarget, setEditTarget] = useState<CalendarEvent | null | 'new'>('new' as any);
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [sentWish, setSentWish] = useState<string | null>(null);
 
-  useEffect(() => { saveEvents(events); }, [events]);
+  useEffect(() => {
+    let active = true;
+    const fetchEvents = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        if (!active) return;
+        const loaded = loadEvents();
+        setEvents(loaded);
+      } catch (err: any) {
+        if (active) setError(err.message || "Failed to load events.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchEvents();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      saveEvents(events);
+    }
+  }, [events, loading]);
 
   const sorted = [...events].sort((a, b) => getDaysUntil(a.date) - getDaysUntil(b.date));
 
@@ -376,7 +404,20 @@ export default function SocialCalendarScreen() {
         </button>
       </div>
 
-      {/* Today banner */}
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+          <p className="text-sm text-gray-400 font-mono tracking-wider">LOADING SOCIAL CALENDAR...</p>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <p className="text-red-400 font-bold mb-2">Sync Error</p>
+          <p className="text-white/60 text-xs mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl text-xs">Retry</button>
+        </div>
+      ) : (
+        <>
+          {/* Today banner */}
       {todayEvents.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -540,8 +581,10 @@ export default function SocialCalendarScreen() {
           </div>
         )}
       </div>
+    </>
+  )}
 
-      {/* Add/Edit Modal */}
+  {/* Add/Edit Modal */}
       <AnimatePresence>
         {showModal && (
           <EditModal

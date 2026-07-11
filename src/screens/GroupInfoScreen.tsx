@@ -231,114 +231,139 @@ export default function GroupInfoScreen() {
   });
 
   const [members, setMembers] = useState(group.members);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Sync state if groupId changes
   useEffect(() => {
-    let resolvedGroup: any = {
-      id: "3",
-      name: MOCK_GROUP.name,
-      avatar: MOCK_GROUP.avatar,
-      description: MOCK_GROUP.description,
-      createdBy: MOCK_GROUP.createdBy,
-      memberCount: MOCK_GROUP.memberCount,
-      members: MOCK_GROUP.members,
-      isAdmin: MOCK_GROUP.isAdmin,
-      adminRules: [
-        "Respect all members of the Telugu Squad 🌟",
-        "Keep discussions focused on regional games and vibes",
-        "No spamming, swearing, or toxic behavior",
-        "Admins have the final say on all match disputes"
-      ]
-    };
+    let active = true;
+    const fetchGroup = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        if (!active) return;
+        
+        let resolvedGroup: any = {
+          id: "3",
+          name: MOCK_GROUP.name,
+          avatar: MOCK_GROUP.avatar,
+          description: MOCK_GROUP.description,
+          createdBy: MOCK_GROUP.createdBy,
+          memberCount: MOCK_GROUP.memberCount,
+          members: MOCK_GROUP.members,
+          isAdmin: MOCK_GROUP.isAdmin,
+          adminRules: [
+            "Respect all members of the Telugu Squad 🌟",
+            "Keep discussions focused on regional games and vibes",
+            "No spamming, swearing, or toxic behavior",
+            "Admins have the final say on all match disputes"
+          ]
+        };
 
-    if (groupId) {
-      if (groupId.startsWith('group_')) {
-        try {
-          const storedStr = localStorage.getItem('skrimchat_custom_groups');
-          if (storedStr) {
-            const customGroups = JSON.parse(storedStr);
-            const found = customGroups.find((g: any) => g.id === groupId);
-            if (found) {
-              let resolvedMembers = found.membersWithRoles;
-              if (!resolvedMembers) {
-                const creatorMember = {
-                  id: "me",
-                  name: "rajani (You)",
-                  role: "Admin",
-                  isMe: true,
-                  isOnline: true
-                };
-                const mappedMembers = (found.members || []).map((mid: string) => {
-                  const contact = CONTACTS_MAP[mid] || { name: mid, online: false };
-                  return {
-                    id: mid,
-                    name: contact.name,
-                    role: "Member",
-                    isMe: false,
-                    isOnline: contact.online
+        if (groupId) {
+          if (groupId.startsWith('group_')) {
+            try {
+              const storedStr = localStorage.getItem('skrimchat_custom_groups');
+              if (storedStr) {
+                const customGroups = JSON.parse(storedStr);
+                const found = customGroups.find((g: any) => g.id === groupId);
+                if (found) {
+                  let resolvedMembers = found.membersWithRoles;
+                  if (!resolvedMembers) {
+                    const creatorMember = {
+                      id: "me",
+                      name: "rajani (You)",
+                      role: "Admin",
+                      isMe: true,
+                      isOnline: true
+                    };
+                    const mappedMembers = (found.members || []).map((mid: string) => {
+                      const contact = CONTACTS_MAP[mid] || { name: mid, online: false };
+                      return {
+                        id: mid,
+                        name: contact.name,
+                        role: "Member",
+                        isMe: false,
+                        isOnline: contact.online
+                      };
+                    });
+                    resolvedMembers = [creatorMember, ...mappedMembers];
+                  }
+                  resolvedGroup = {
+                    id: found.id,
+                    name: found.name,
+                    avatar: found.avatar || "💬",
+                    description: found.description || '"No description provided."',
+                    createdBy: found.createdBy || "rajani",
+                    memberCount: resolvedMembers.length,
+                    members: resolvedMembers,
+                    isAdmin: true,
+                    adminRules: found.adminRules || []
                   };
-                });
-                resolvedMembers = [creatorMember, ...mappedMembers];
+                }
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            const matchedMock = MOCK_CHATS.find((c) => c.id === groupId);
+            if (matchedMock) {
+              let defaultMembers = [
+                { id: "me", name: "rajani (You)", role: "Admin", isMe: true, isOnline: true },
+                { id: "m2", name: "Priya Sharma", role: "Admin", isMe: false, isOnline: true },
+                { id: "m3", name: "Rahul Verma", role: "Member", isMe: false, isOnline: false },
+                { id: "m4", name: "Kiran Reddy", role: "Member", isMe: false, isOnline: false },
+              ];
+              if (groupId === "7") {
+                defaultMembers = [
+                  { id: "me", name: "rajani (You)", role: "Member", isMe: true, isOnline: true },
+                  { id: "m2", name: "Priya Sharma", role: "Admin", isMe: false, isOnline: true },
+                  { id: "m3", name: "Rahul Verma", role: "Member", isMe: false, isOnline: false },
+                  { id: "m4", name: "Sneha Patel", role: "Member", isMe: false, isOnline: false },
+                ];
               }
               resolvedGroup = {
-                id: found.id,
-                name: found.name,
-                avatar: found.avatar || "💬",
-                description: found.description || '"No description provided."',
-                createdBy: found.createdBy || "rajani",
-                memberCount: resolvedMembers.length,
-                members: resolvedMembers,
-                isAdmin: true,
-                adminRules: found.adminRules || []
+                id: matchedMock.id,
+                name: matchedMock.name,
+                avatar: matchedMock.avatar || "💬",
+                description: groupId === "3" ? '"Telugu vibes only! 🌟"' : '"Good vibes only! ✨"',
+                createdBy: groupId === "3" ? "rajani" : "Priya",
+                memberCount: defaultMembers.length,
+                members: defaultMembers,
+                isAdmin: groupId === "3",
+                adminRules: groupId === "3" ? [
+                  "Respect all members of the Telugu Squad 🌟",
+                  "Keep discussions focused on regional games and vibes",
+                  "No spamming, swearing, or toxic behavior",
+                  "Admins have the final say on all match disputes"
+                ] : [
+                  "Keep it wholesome ✨",
+                  "Respect each other's gaming setups and opinions",
+                  "No self-promotion or referral link spamming"
+                ]
               };
             }
           }
-        } catch (e) {
-          console.error(e);
         }
-      } else {
-        const matchedMock = MOCK_CHATS.find((c) => c.id === groupId);
-        if (matchedMock) {
-          let defaultMembers = [
-            { id: "me", name: "rajani (You)", role: "Admin", isMe: true, isOnline: true },
-            { id: "m2", name: "Priya Sharma", role: "Admin", isMe: false, isOnline: true },
-            { id: "m3", name: "Rahul Verma", role: "Member", isMe: false, isOnline: false },
-            { id: "m4", name: "Kiran Reddy", role: "Member", isMe: false, isOnline: false },
-          ];
-          if (groupId === "7") {
-            defaultMembers = [
-              { id: "me", name: "rajani (You)", role: "Member", isMe: true, isOnline: true },
-              { id: "m2", name: "Priya Sharma", role: "Admin", isMe: false, isOnline: true },
-              { id: "m3", name: "Rahul Verma", role: "Member", isMe: false, isOnline: false },
-              { id: "m4", name: "Sneha Patel", role: "Member", isMe: false, isOnline: false },
-            ];
-          }
-          resolvedGroup = {
-            id: matchedMock.id,
-            name: matchedMock.name,
-            avatar: matchedMock.avatar || "💬",
-            description: groupId === "3" ? '"Telugu vibes only! 🌟"' : '"Good vibes only! ✨"',
-            createdBy: groupId === "3" ? "rajani" : "Priya",
-            memberCount: defaultMembers.length,
-            members: defaultMembers,
-            isAdmin: groupId === "3",
-            adminRules: groupId === "3" ? [
-              "Respect all members of the Telugu Squad 🌟",
-              "Keep discussions focused on regional games and vibes",
-              "No spamming, swearing, or toxic behavior",
-              "Admins have the final say on all match disputes"
-            ] : [
-              "Keep it wholesome ✨",
-              "Respect each other's gaming setups and opinions",
-              "No self-promotion or referral link spamming"
-            ]
-          };
+
+        setGroup(resolvedGroup);
+        setMembers(resolvedGroup.members);
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || "Failed to load group");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
         }
       }
-    }
+    };
 
-    setGroup(resolvedGroup);
-    setMembers(resolvedGroup.members);
+    fetchGroup();
+    return () => {
+      active = false;
+    };
   }, [groupId]);
 
   // Save changes to custom group when members change
@@ -1257,6 +1282,24 @@ export default function GroupInfoScreen() {
       )}
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="flex flex-col w-full h-[100dvh] bg-black items-center justify-center text-center p-6">
+        <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#00F0FF] animate-spin mb-4" />
+        <p className="text-[#00F0FF] text-xs font-mono tracking-wider">DECODING SUB-SPACE COMMS...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col w-full h-[100dvh] bg-black items-center justify-center text-center p-6">
+        <p className="text-red-400 font-medium mb-3">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col w-full h-[100dvh] bg-black relative">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Check } from 'lucide-react';
@@ -11,6 +11,29 @@ export default function PremiumManageScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [price, setPrice] = useState(PREMIUM_CONFIG.defaultPrices[1]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activeFlag = true;
+    const fetchPremium = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (activeFlag) {
+          setActive(PREMIUM_CONFIG.active);
+          setContent(PREMIUM_CONFIG.content);
+        }
+      } catch (err: any) {
+        if (activeFlag) setError(err.message || 'Failed to load premium configuration.');
+      } finally {
+        if (activeFlag) setLoading(false);
+      }
+    };
+    fetchPremium();
+    return () => { activeFlag = false; };
+  }, []);
 
   const availableToMark = USER_CONTENT.filter((c) => !content.some((pc) => pc.id === c.id));
 
@@ -34,7 +57,19 @@ export default function PremiumManageScreen() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+          <p className="text-sm text-gray-500 font-mono tracking-wider">RETRIEVING PREMIUM STATS...</p>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <p className="text-red-400 font-bold mb-2">Sync Error</p>
+          <p className="text-white/60 text-xs mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-neon-purple text-white font-bold rounded-xl text-xs">Retry</button>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
         <div className="bg-skrim-surface rounded-2xl border border-white/5 p-4 flex items-center justify-between">
           <div>
             <p className="font-bold text-white text-sm">Premium Content</p>
@@ -72,6 +107,7 @@ export default function PremiumManageScreen() {
           </div>
         </div>
       </div>
+    )}
 
       <AnimatePresence>
         {pickerOpen && (

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, MapPin } from 'lucide-react';
 import { OrbitUser, MOOD_META } from '../../lib/mock/mockOrbit';
-import { getCompatibility, DEFAULT_MY_INTERESTS } from '../../lib/orbitCompat';
+import { getCompatibilityAsync, DEFAULT_MY_INTERESTS } from '../../lib/orbitCompat';
 import type { RequestStatus } from '../../hooks/useOrbit';
 
 interface Props {
@@ -12,7 +12,26 @@ interface Props {
 }
 
 export function OrbitUserCard({ user, status, onOpenIcebreaker, onOpenProfile }: Props) {
-  const { score, sharedInterests } = getCompatibility(DEFAULT_MY_INTERESTS, 'want_to_chat', user);
+  const [compat, setCompat] = useState<{ score: number; sharedInterests: string[] } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchCompat = async () => {
+      try {
+        const data = await getCompatibilityAsync(DEFAULT_MY_INTERESTS, 'want_to_chat', user);
+        if (active) {
+          setCompat(data);
+        }
+      } catch (err) {
+        console.error("Failed to load compatibility", err);
+      }
+    };
+    fetchCompat();
+    return () => { active = false; };
+  }, [user]);
+
+  const score = compat?.score ?? 0;
+  const sharedInterests = compat?.sharedInterests ?? [];
   const mood = MOOD_META[user.mood];
   const revealed = status === 'accepted';
 

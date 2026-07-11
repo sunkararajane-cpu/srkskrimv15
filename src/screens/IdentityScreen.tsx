@@ -188,6 +188,37 @@ export default function IdentityScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState('posts');
   const [activeSavedTab, setActiveSavedTab] = useState<'bookmarks' | 'offline'>('bookmarks');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadIdentity = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        // We can check if user is loaded, otherwise throw an error
+        if (!active) return;
+        if (!user) {
+          throw new Error("Unable to establish handshake with identity core.");
+        }
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || "Identity synchronization failed.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    loadIdentity();
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
   const { offlineVibes, loadVibes, deleteVibe } = useOfflineStore();
   const [selectedMedia, setSelectedMedia] = useState<{index: number, type: 'post'|'vibe'|'saved'|'repost'|'tagged'|string, urls: string[], users?: any[], isSavedTab?: boolean} | null>(null);
   const pinnedPostIds = usePinnedPosts(user?.username || '');
@@ -800,7 +831,24 @@ export default function IdentityScreen() {
     }]);
   };
 
-  if (!user) return <div className="p-8 text-center text-white">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="w-full h-full bg-skrim-bg flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+        <p className="text-sm text-gray-400">Loading identity cache...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full bg-skrim-bg flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-red-400 font-bold mb-2">Sync Protocol Failed</p>
+        <p className="text-white/60 text-xs mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#B026FF] hover:bg-[#B026FF]/80 text-white font-bold rounded-xl text-xs">Retry</button>
+      </div>
+    );
+  }
 
   const currentCover = user.cover || "none"; // Using none to show gradient
 

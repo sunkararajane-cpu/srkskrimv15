@@ -12,12 +12,21 @@ interface Props {
 
 export function IcebreakerSheet({ user, onClose, onSend, requestsRemaining }: Props) {
   const [sentType, setSentType] = useState<IcebreakerType | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   if (!user) return null;
 
-  const handleSend = (type: IcebreakerType) => {
-    const ok = onSend(type);
-    if (ok) setSentType(type);
+  const handleSend = async (type: IcebreakerType) => {
+    setIsSending(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      const ok = onSend(type);
+      if (ok) setSentType(type);
+    } catch (err) {
+      console.error("Failed to send icebreaker", err);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -68,7 +77,7 @@ export function IcebreakerSheet({ user, onClose, onSend, requestsRemaining }: Pr
                   <button
                     key={type}
                     onClick={() => handleSend(type)}
-                    disabled={requestsRemaining <= 0}
+                    disabled={requestsRemaining <= 0 || isSending}
                     className="glass-panel rounded-xl p-3 flex items-center gap-2 active:scale-95 transition disabled:opacity-30"
                   >
                     <span className="text-xl">{ICEBREAKER_META[type].emoji}</span>

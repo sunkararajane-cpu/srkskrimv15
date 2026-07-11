@@ -22,17 +22,42 @@ interface CampaignDashboardProps {
 }
 
 export function CampaignDashboard({ onBack, onCreateAd, onEditResubmit, justLaunchedId }: CampaignDashboardProps) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [editingBudget, setEditingBudget] = useState<Campaign | null>(null);
   const [stopConfirm, setStopConfirm] = useState<Campaign | null>(null);
 
-  const spendCounter = useCountUp(SPEND_SUMMARY.totalThisMonth, 900);
+  const spendCounter = useCountUp(loading ? 0 : SPEND_SUMMARY.totalThisMonth, 900);
+
+  useEffect(() => {
+    let active = true;
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+        if (active) {
+          setCampaigns(INITIAL_CAMPAIGNS);
+        }
+      } catch (err: any) {
+        if (active) setError(err.message || 'Failed to load campaigns.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    loadDashboard();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Mock "live" reach ticking for active campaigns, so numbers feel alive on the dashboard.
   useEffect(() => {
+    if (loading) return;
     const interval = setInterval(() => {
       setCampaigns((prev) =>
         prev.map((c) =>
@@ -43,7 +68,7 @@ export function CampaignDashboard({ onBack, onCreateAd, onEditResubmit, justLaun
       );
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loading]);
 
   const filtered = campaigns.filter((c) => {
     if (filter === 'all') return true;
@@ -111,7 +136,18 @@ export function CampaignDashboard({ onBack, onCreateAd, onEditResubmit, justLaun
       </header>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+            <p className="text-xs text-gray-500 font-mono tracking-wider">SYNCING AD METRICS...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-red-400 font-bold mb-2">Sync Error</p>
+            <p className="text-white/60 text-xs mb-4">{error}</p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-neon-purple text-white font-bold rounded-xl text-xs">Retry</button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-20">
             <span className="text-5xl mb-4">📣</span>
             <h3 className="text-lg font-bold text-white mb-1">No campaigns yet</h3>

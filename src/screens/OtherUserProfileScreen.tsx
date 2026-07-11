@@ -74,11 +74,18 @@ export default function OtherUserProfileScreen() {
   const [mutualFollowers, setMutualFollowers] = useState<any[]>([]);
   const [peopleAlsoFollow, setPeopleAlsoFollow] = useState<any[]>([]);
   const [postsGrid, setPostsGrid] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const loadProfileSettings = async () => {
+      setLoading(true);
+      setError(null);
       const uname = user.username?.replace('@', '') || '';
       try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (!active) return;
         const blocked = await isBlocked(uname);
         const muted = await isMuted(uname);
         const close = await isCloseFriend(uname);
@@ -109,11 +116,21 @@ export default function OtherUserProfileScreen() {
         }
         const sortedGrid = await sortWithPinnedFirst(userPosts.slice(0, 9), user.username || '');
         setPostsGrid(sortedGrid);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to load profile social parameters:", e);
+        if (active) {
+          setError(e.message || "Failed to load profile data");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     };
     loadProfileSettings();
+    return () => {
+      active = false;
+    };
   }, [user.username, currentUser?.username, socialCounts.followers, pinnedPostIds]);
 
   const handleMessageClick = () => {
@@ -132,6 +149,25 @@ export default function OtherUserProfileScreen() {
   };
   
   const selectedMediaUrls = postsGrid.map((p: any) => p.thumbnail || p.image || p.videoSrc || p.urls?.[0] || 'https://picsum.photos/400/400').filter(Boolean);
+
+  if (loading) {
+    return (
+      <div className="w-full h-full bg-skrim-bg flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#00F0FF] animate-spin mb-4" />
+        <p className="text-sm text-gray-400">Synchronizing orbital social matrix...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full bg-skrim-bg flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-red-400 font-bold mb-2">Sync Protocol Failed</p>
+        <p className="text-white/60 text-xs mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-[#B026FF] hover:bg-[#B026FF]/80 text-white font-bold rounded-xl text-xs">Retry Uplink</button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full bg-skrim-bg overflow-y-auto no-scrollbar pb-20 relative">

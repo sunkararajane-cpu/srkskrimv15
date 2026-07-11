@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Megaphone, Radio } from 'lucide-react';
 import { LIVE_DATA } from '../../lib/mock/monetizationMockData';
@@ -12,7 +12,29 @@ interface LiveTabProps {
 export function LiveTab({ onBoostNextStream }: LiveTabProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchLive = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (active) setLoading(false);
+    };
+    fetchLive();
+    return () => { active = false; };
+  }, []);
+
   const { totalStreams, peakConcurrent, totalViewers, avgDuration, streams, giftLeaderboard } = LIVE_DATA;
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-24 px-6">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-[#FF2D87] animate-spin mb-4" />
+        <p className="text-sm text-gray-500 font-mono tracking-wider">RETRIEVING LIVE STREAM STATS...</p>
+      </div>
+    );
+  }
 
   if (totalStreams === 0) {
     return (

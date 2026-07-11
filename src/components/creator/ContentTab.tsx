@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Megaphone } from 'lucide-react';
 import { CONTENT_DATA, ContentItem } from '../../lib/mock/monetizationMockData';
@@ -28,6 +28,18 @@ export function ContentTab({ initialSelectedId, onBoost }: ContentTabProps) {
   const [sort, setSort] = useState<SortOption>('views');
   const [sortOpen, setSortOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(initialSelectedId || null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchContent = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (active) setLoading(false);
+    };
+    fetchContent();
+    return () => { active = false; };
+  }, [subTab, sort]);
 
   const items = useMemo(() => {
     const list = [...CONTENT_DATA[subTab]];
@@ -85,7 +97,12 @@ export function ContentTab({ initialSelectedId, onBoost }: ContentTabProps) {
         )}
       </div>
 
-      {items.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+          <p className="text-xs text-gray-500 font-mono tracking-wider">RETRIEVING POST INSIGHTS...</p>
+        </div>
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center py-16">
           <p className="text-sm text-gray-500 mb-4">{EMPTY_LABELS[subTab]}</p>
           <button className="px-5 py-2.5 bg-neon-purple text-white font-bold rounded-xl text-xs">

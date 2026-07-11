@@ -6,16 +6,34 @@ import { FEATURE_FLAGS } from '../lib/config/featureFlags';
 export default function AdminDashboardScreen() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
       setLoading(true);
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        setData(await getAdminData());
+      setError(null);
+      try {
+        if (FEATURE_FLAGS.MOCK_MODE) {
+          const adminData = await getAdminData();
+          if (active) {
+            setData(adminData);
+          }
+        }
+      } catch (err: any) {
+        if (active) {
+          setError(err.message || "Failed to load admin operations data");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
     fetchData();
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -26,8 +44,16 @@ export default function AdminDashboardScreen() {
       </header>
 
       <div className="p-4 flex flex-col gap-4">
-        {loading || !data ? (
+        {loading ? (
              <div className="flex items-center justify-center p-8"><div className="w-6 h-6 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" /></div>
+        ) : error ? (
+             <div className="p-8 text-center flex flex-col items-center">
+               <p className="text-red-400 font-bold mb-2">Access Denied / System Error</p>
+               <p className="text-white/60 text-xs mb-4">{error}</p>
+               <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-600 rounded-lg text-xs font-bold text-white">Retry Connection</button>
+             </div>
+        ) : !data ? (
+             <p className="text-gray-500 text-sm text-center">No administration data available.</p>
         ) : (
           <>
             <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-xl flex items-center gap-4">

@@ -456,12 +456,17 @@ export function SparkViewer({
   const [newHighlightName, setNewHighlightName] = useState("");
   const [newHighlightEmoji, setNewHighlightEmoji] = useState("✨");
   const [allSparks, setAllSparks] = useState<any[]>([]);
+  const [loadingSparks, setLoadingSparks] = useState(false);
 
   useEffect(() => {
     if (activeSheet === "highlight" || activeSheet === "create-highlight" || activeSheet === "highlight-options") {
+      setLoadingSparks(true);
       getSparks().then((sp) => {
         setAllSparks(sp || []);
-      }).catch(() => {});
+      }).catch(() => {})
+      .finally(() => {
+        setLoadingSparks(false);
+      });
     }
   }, [activeSheet]);
 

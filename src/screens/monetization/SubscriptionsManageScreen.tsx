@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check } from 'lucide-react';
@@ -12,6 +12,29 @@ export default function SubscriptionsManageScreen() {
   const [optionalPerks, setOptionalPerks] = useState<string[]>([]);
   const [enabling, setEnabling] = useState(false);
   const [vaultPhase, setVaultPhase] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let activeFlag = true;
+    const fetchSubs = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (activeFlag) {
+          setActive(SUBSCRIPTION_CONFIG.active);
+          setPrice(SUBSCRIPTION_CONFIG.price);
+        }
+      } catch (err: any) {
+        if (activeFlag) setError(err.message || 'Failed to load subscriptions configuration.');
+      } finally {
+        if (activeFlag) setLoading(false);
+      }
+    };
+    fetchSubs();
+    return () => { activeFlag = false; };
+  }, []);
 
   const togglePerk = (perk: string) =>
     setOptionalPerks((p) => (p.includes(perk) ? p.filter((x) => x !== perk) : [...p, perk]));
@@ -25,6 +48,25 @@ export default function SubscriptionsManageScreen() {
       setActive(true);
     }, 1200);
   };
+
+  if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col bg-black text-white overflow-hidden justify-center items-center">
+        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-4" />
+        <p className="text-sm text-gray-500 font-mono tracking-wider">LOADING SUBSCRIPTION PORTAL...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full flex flex-col bg-black text-white overflow-hidden justify-center items-center p-6 text-center">
+        <p className="text-red-400 font-bold mb-2">Portal Error</p>
+        <p className="text-white/60 text-xs mb-4">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-neon-purple text-white font-bold rounded-xl text-xs">Retry</button>
+      </div>
+    );
+  }
 
   if (!active) {
     return (

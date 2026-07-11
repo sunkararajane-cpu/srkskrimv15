@@ -32,6 +32,20 @@ const SAFETY_OPTIONS: { value: FemaleSafetyMode; label: string; desc: string }[]
 ];
 
 export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props) {
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleUpdate = async (patch: Partial<OrbitSettings>) => {
+    setIsSaving(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      onUpdate(patch);
+    } catch (err) {
+      console.error("Failed to update settings", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && <motion.div
@@ -50,7 +64,12 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-white text-lg">Orbit settings</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-lg">Orbit settings</h3>
+              {isSaving && (
+                <div className="w-3.5 h-3.5 rounded-full border border-t-transparent border-[#00F0FF] animate-spin" />
+              )}
+            </div>
             <button onClick={onClose} className="p-1 text-white/50">
               <X className="w-5 h-5" />
             </button>
@@ -62,7 +81,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
                 <Pill
                   key={km}
                   active={settings.radiusKm === km}
-                  onClick={() => onUpdate({ radiusKm: km })}
+                  onClick={() => handleUpdate({ radiusKm: km })}
                   label={`${km} km`}
                 />
               ))}
@@ -74,7 +93,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
               {(Object.keys(MOOD_META) as MoodStatus[]).map((mood) => (
                 <button
                   key={mood}
-                  onClick={() => onUpdate({ mood })}
+                  onClick={() => handleUpdate({ mood })}
                   className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition ${
                     settings.mood === mood
                       ? 'border-neon-purple bg-neon-purple/10'
@@ -94,7 +113,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
                 <Pill
                   key={opt.value}
                   active={settings.presence === opt.value}
-                  onClick={() => onUpdate({ presence: opt.value })}
+                  onClick={() => handleUpdate({ presence: opt.value })}
                   label={opt.label}
                 />
               ))}
@@ -110,7 +129,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
                 <Pill
                   key={opt.value}
                   active={settings.ageFilter === opt.value}
-                  onClick={() => onUpdate({ ageFilter: opt.value })}
+                  onClick={() => handleUpdate({ ageFilter: opt.value })}
                   label={opt.label}
                 />
               ))}
@@ -122,7 +141,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
               {SAFETY_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => onUpdate({ femaleSafetyMode: opt.value })}
+                  onClick={() => handleUpdate({ femaleSafetyMode: opt.value })}
                   className={`p-2.5 rounded-xl border text-left transition ${
                     settings.femaleSafetyMode === opt.value
                       ? 'border-neon-purple bg-neon-purple/10'
@@ -143,7 +162,7 @@ export function OrbitSettingsSheet({ open, settings, onClose, onUpdate }: Props)
                 {settings.isVerified ? 'Verified account' : 'Not verified'}
               </span>
               <button
-                onClick={() => onUpdate({ isVerified: !settings.isVerified })}
+                onClick={() => handleUpdate({ isVerified: !settings.isVerified })}
                 className="text-[11px] font-bold text-neon-blue"
               >
                 {settings.isVerified ? 'Unverify (test)' : 'Mock verify'}
