@@ -10,8 +10,14 @@ import { getConfig } from '../runtimeConfig';
 
 async function getUserPool(): Promise<CognitoUserPool> {
   const config = await getConfig();
+  const userPoolId = config.cognitoUserPoolId;
+  
+  if (!userPoolId || userPoolId.includes('placeholder') || !userPoolId.includes('_')) {
+    throw new Error('AWS Cognito is not configured. Please set a valid UserPoolId (e.g., us-east-1_abcdef123) in your configuration.');
+  }
+
   return new CognitoUserPool({
-    UserPoolId: config.cognitoUserPoolId,
+    UserPoolId: userPoolId,
     ClientId: config.cognitoClientId,
   });
 }
@@ -110,21 +116,26 @@ export async function signOut(): Promise<void> {
 }
 
 export async function getCurrentSession(): Promise<CognitoUserSession | null> {
-  const userPool = await getUserPool();
-  const cognitoUser = userPool.getCurrentUser();
-  if (!cognitoUser) {
+  try {
+    const userPool = await getUserPool();
+    const cognitoUser = userPool.getCurrentUser();
+    if (!cognitoUser) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      cognitoUser.getSession((err: any, session: CognitoUserSession | null) => {
+        if (err || !session || !session.isValid()) {
+          resolve(null);
+        } else {
+          resolve(session);
+        }
+      });
+    });
+  } catch (err: any) {
+    console.warn("Cognito is not configured or UserPoolId is invalid, proceeding as guest session:", err.message);
     return null;
   }
-
-  return new Promise((resolve) => {
-    cognitoUser.getSession((err: any, session: CognitoUserSession | null) => {
-      if (err || !session || !session.isValid()) {
-        resolve(null);
-      } else {
-        resolve(session);
-      }
-    });
-  });
 }
 
 export async function refreshSession(
