@@ -124,9 +124,9 @@ export default function WorldDetailScreen() {
     window.dispatchEvent(new Event("world_hero_pulse"));
 
     // Sequence
-    setTimeout(() => {
+    setTimeout(async () => {
       // End of phase 1 & 2 -> trigger phase 3 & 4
-      const rejoined = join();
+      const rejoined = await join();
       setIsRejoin(rejoined);
       setIsJoining(false);
       setShowWelcome(true);
@@ -136,9 +136,9 @@ export default function WorldDetailScreen() {
     }, 1400); // Welcome moment at 1400ms
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setShowPaymentModal(false);
-    const rejoined = join();
+    const rejoined = await join();
     setIsRejoin(rejoined);
     setShowWelcome(true);
     fireParticles();
@@ -153,10 +153,10 @@ export default function WorldDetailScreen() {
     // Phase 1: Detach
     window.dispatchEvent(new Event("world_hero_shrink"));
 
-    setTimeout(() => {
+    setTimeout(async () => {
       // Phase 3 & 4
       fireParticles(); // Reverse burst visually simulation
-      leave();
+      await leave();
       setIsLeaving(false);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 4000);
@@ -1578,10 +1578,18 @@ function AboutTab({
   isAdmin?: boolean;
   key?: React.Key;
 }) {
-  const [pendingRequests, setPendingRequests] = useState(() => getPendingRequests(world.id));
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
+  const loadRequests = async () => {
+    const reqs = await getPendingRequests(world.id);
+    setPendingRequests(reqs);
+  };
 
   useEffect(() => {
-    const refresh = () => setPendingRequests(getPendingRequests(world.id));
+    loadRequests();
+    const refresh = () => {
+      loadRequests();
+    };
     window.addEventListener('worlds_updated', refresh);
     return () => window.removeEventListener('worlds_updated', refresh);
   }, [world.id]);
@@ -1731,14 +1739,14 @@ function AboutTab({
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={() => approveJoinRequest(world.id, req.id)}
+                        onClick={async () => { await approveJoinRequest(world.id, req.id); loadRequests(); }}
                         className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
                       >
                         Approve
                       </button>
                       <button
                         type="button"
-                        onClick={() => denyJoinRequest(world.id, req.id)}
+                        onClick={async () => { await denyJoinRequest(world.id, req.id); loadRequests(); }}
                         className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors"
                       >
                         Deny

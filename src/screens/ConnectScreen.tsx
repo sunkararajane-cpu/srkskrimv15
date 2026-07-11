@@ -224,8 +224,13 @@ export default function ConnectScreen() {
   }, []);
 
   useEffect(() => {
-    const loadRequests = () => {
-      setRequests(getMessageRequests());
+    const loadRequests = async () => {
+      try {
+        const reqs = await getMessageRequests();
+        setRequests(reqs);
+      } catch (e) {
+        console.error(e);
+      }
     };
     loadRequests();
     window.addEventListener('skrimchat_requests_updated', loadRequests);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSignalStore } from '../store/signalStore';
+import { apiClient } from '../lib/apiClient';
 
 // MOCK INITIAL DATA
 export const INITIAL_COMMUNITIES = [
@@ -74,84 +75,22 @@ export const INITIAL_COMMUNITIES = [
   }
 ];
 
-// Safe localStorage helpers — corrupted JSON or blocked storage (private mode,
-// disabled cookies, etc.) should degrade gracefully instead of crashing the screen.
-function safeGet(key: string): string | null {
+export async function getCommunities(): Promise<any[]> {
   try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function safeSet(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // ignore — e.g. storage disabled or quota exceeded
-  }
-}
-
-function safeRemove(key: string) {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // ignore — e.g. storage disabled
-  }
-}
-
-function safeParseArray<T = string>(str: string | null): T[] {
-  if (!str) return [];
-  try {
-    const parsed = JSON.parse(str);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-export function getCommunities() {
-  const allStr = safeGet('worlds_all');
-  let allComms: typeof INITIAL_COMMUNITIES = INITIAL_COMMUNITIES;
-  if (allStr) {
-    try {
-      const parsed = JSON.parse(allStr);
-      allComms = Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_COMMUNITIES;
-    } catch {
-      allComms = INITIAL_COMMUNITIES;
-    }
-  } else {
-    safeSet('worlds_all', JSON.stringify(INITIAL_COMMUNITIES));
-  }
-
-  const joinedStr = safeGet('worlds_joined');
-  let joinedIds: string[] = [];
-  if (joinedStr) {
-    joinedIds = safeParseArray<string>(joinedStr);
-  } else {
-    // initialize from original mock data
-    joinedIds = allComms.filter((c) => c.joined).map((c) => c.id);
-    safeSet('worlds_joined', JSON.stringify(joinedIds));
-    joinedIds.forEach((id) => {
-      safeSet(`worlds_level_${id}`, 'pioneer');
-    });
-  }
-
-  return allComms
-    .map(c => ({
+    return await apiClient.get<any[]>('/skrimchat-world-members/communities');
+  } catch (err) {
+    console.warn("Failed to fetch communities via apiClient, returning local fallback.", err);
+    const allStr = localStorage.getItem('worlds_all');
+    let allComms = allStr ? JSON.parse(allStr) : INITIAL_COMMUNITIES;
+    const joinedStr = localStorage.getItem('worlds_joined');
+    const joinedIds = joinedStr ? JSON.parse(joinedStr) : allComms.filter((c: any) => c.joined).map((c: any) => c.id);
+    return allComms.map((c: any) => ({
       ...c,
       joined: joinedIds.includes(c.id),
-      members: c.members + (joinedIds.includes(c.id) && !c.joined ? 1 : 0) // if we joined a new one, add 1 to mock
-    }))
-    // Private worlds stay invisible in browse/search/discover to anyone who
-    // isn't already a member — that's the whole point of "private".
-    .filter(c => !c.isPrivate || joinedIds.includes(c.id));
+      members: c.members + (joinedIds.includes(c.id) && !c.joined ? 1 : 0)
+    })).filter((c: any) => !c.isPrivate || joinedIds.includes(c.id));
+  }
 }
-
-// -- PRIVATE WORLD JOIN REQUESTS --
-// Since this is a single-local-user mock, "requests" are stored per world as
-// a small list of {id, name, requestedAt}. The current user is always
-// represented by the id "currentUser".
 
 interface PendingRequest {
   id: string;
@@ -159,12 +98,8 @@ interface PendingRequest {
   requestedAt: number;
 }
 
-function pendingKey(worldId: string) {
-  return `worlds_pending_${worldId}`;
-}
-
-export function getPendingRequests(worldId: string): PendingRequest[] {
-  const str = safeGet(pendingKey(worldId));
+export function getPendingRequestsLocal(worldId: string): PendingRequest[] {
+  const str = localStorage.getItem(`worlds_pending_${worldId}`);
   if (!str) return [];
   try {
     const parsed = JSON.parse(str);
@@ -174,14 +109,15 @@ export function getPendingRequests(worldId: string): PendingRequest[] {
   }
 }
 
-function setPendingRequests(worldId: string, list: PendingRequest[]) {
-  safeSet(pendingKey(worldId), JSON.stringify(list));
-  window.dispatchEvent(new Event('worlds_updated'));
+export async function getPendingRequests(worldId: string): Promise<PendingRequest[]> {
+  try {
+    return await apiClient.get<PendingRequest[]>(`/skrimchat-world-members/${worldId}/pending`);
+  } catch (err) {
+    console.warn(`Failed to fetch pending requests for ${worldId}, using local fallback.`, err);
+    return getPendingRequestsLocal(worldId);
+  }
 }
 
-// Called right after creating a private world so there's something for the
-// admin-approval UI to show immediately, mirroring how other parts of the
-// app (member counts, seen-by) simulate activity in this mock layer.
 export function seedMockPendingRequests(worldId: string) {
   const names = ["Priya S.", "Rahul K."];
   const seeded: PendingRequest[] = names.map((name, i) => ({
@@ -189,95 +125,128 @@ export function seedMockPendingRequests(worldId: string) {
     name,
     requestedAt: Date.now() - (i + 1) * 1000 * 60 * 30,
   }));
-  setPendingRequests(worldId, seeded);
+  localStorage.setItem(`worlds_pending_${worldId}`, JSON.stringify(seeded));
+  window.dispatchEvent(new Event('worlds_updated'));
 }
 
-export function hasRequestedJoin(worldId: string): boolean {
-  return getPendingRequests(worldId).some(r => r.id === 'currentUser');
+export function hasRequestedJoinLocal(worldId: string): boolean {
+  return getPendingRequestsLocal(worldId).some(r => r.id === 'currentUser');
 }
 
-export function requestJoinPrivateWorld(worldId: string) {
-  const list = getPendingRequests(worldId);
-  if (list.some(r => r.id === 'currentUser')) return;
-  list.push({ id: 'currentUser', name: 'You', requestedAt: Date.now() });
-  setPendingRequests(worldId, list);
+export async function hasRequestedJoin(worldId: string): Promise<boolean> {
+  try {
+    const reqs = await getPendingRequests(worldId);
+    return reqs.some(r => r.id === 'currentUser');
+  } catch {
+    return hasRequestedJoinLocal(worldId);
+  }
 }
 
-export function cancelJoinRequest(worldId: string) {
-  const list = getPendingRequests(worldId).filter(r => r.id !== 'currentUser');
-  setPendingRequests(worldId, list);
-}
-
-// Admin approves a pending requester. If it's the real current user, this
-// actually adds them to worlds_joined. If it's one of the seeded mock
-// requesters, we just remove them from the queue and bump the member count
-// for realism (there's no second real account behind them to "join").
-export function approveJoinRequest(worldId: string, requesterId: string) {
-  const list = getPendingRequests(worldId).filter(r => r.id !== requesterId);
-  setPendingRequests(worldId, list);
-
-  if (requesterId === 'currentUser') {
-    const arr = safeParseArray<string>(safeGet('worlds_joined'));
-    if (!arr.includes(worldId)) {
-      arr.push(worldId);
-      safeSet('worlds_joined', JSON.stringify(arr));
-      safeSet(`worlds_level_${worldId}`, 'explorer');
-      safeSet(`worlds_joined_at_${worldId}`, Date.now().toString());
+export async function requestJoinPrivateWorld(worldId: string) {
+  try {
+    await apiClient.post('/skrimchat-world-members/request-join', { worldId });
+  } catch (err) {
+    console.warn("Failed to request-join via apiClient, running local fallback.", err);
+    const list = getPendingRequestsLocal(worldId);
+    if (!list.some(r => r.id === 'currentUser')) {
+      list.push({ id: 'currentUser', name: 'You', requestedAt: Date.now() });
+      localStorage.setItem(`worlds_pending_${worldId}`, JSON.stringify(list));
     }
+  }
+  window.dispatchEvent(new Event('worlds_updated'));
+}
 
-    // Let the requester know their request went through.
-    const world = getCommunities().find((c) => c.id === worldId);
-    useSignalStore.getState().addSignal({
-      type: 'world_join',
-      user: world?.name || 'World Admin',
-      avatar: '',
-      text: `approved your request to join ${world?.name || 'the world'}! 🎉`,
-      time: 'Just now',
-      worldId,
-    });
-  } else {
-    const allStr = safeGet('worlds_all');
-    if (allStr) {
-      try {
-        const allArr = JSON.parse(allStr);
-        if (Array.isArray(allArr)) {
-          const updated = allArr.map((w: any) =>
-            w.id === worldId ? { ...w, members: (w.members || 0) + 1 } : w
-          );
-          safeSet('worlds_all', JSON.stringify(updated));
-        }
-      } catch {
-        // corrupted list — nothing more we can safely do here
+export async function cancelJoinRequest(worldId: string) {
+  try {
+    await apiClient.post('/skrimchat-world-members/cancel-request', { worldId });
+  } catch (err) {
+    console.warn("Failed to cancel-request via apiClient, running local fallback.", err);
+    const list = getPendingRequestsLocal(worldId).filter(r => r.id !== 'currentUser');
+    localStorage.setItem(`worlds_pending_${worldId}`, JSON.stringify(list));
+  }
+  window.dispatchEvent(new Event('worlds_updated'));
+}
+
+export async function approveJoinRequest(worldId: string, requesterId: string) {
+  try {
+    await apiClient.post(`/skrimchat-world-members/${worldId}/approve`, { requesterId });
+  } catch (err) {
+    console.warn(`Failed to approve join request via apiClient, running local fallback.`, err);
+    const list = getPendingRequestsLocal(worldId).filter(r => r.id !== requesterId);
+    localStorage.setItem(`worlds_pending_${worldId}`, JSON.stringify(list));
+
+    if (requesterId === 'currentUser') {
+      const joinedStr = localStorage.getItem('worlds_joined') || '[]';
+      let arr: string[] = [];
+      try { arr = JSON.parse(joinedStr); } catch {}
+      if (!arr.includes(worldId)) {
+        arr.push(worldId);
+        localStorage.setItem('worlds_joined', JSON.stringify(arr));
+        localStorage.setItem(`worlds_level_${worldId}`, 'explorer');
+        localStorage.setItem(`worlds_joined_at_${worldId}`, Date.now().toString());
+      }
+
+      const comms = await getCommunities();
+      const world = comms.find((c) => c.id === worldId);
+      useSignalStore.getState().addSignal({
+        type: 'world_join',
+        user: world?.name || 'World Admin',
+        avatar: '',
+        text: `approved your request to join ${world?.name || 'the world'}! 🎉`,
+        time: 'Just now',
+        worldId,
+      });
+    } else {
+      const allStr = localStorage.getItem('worlds_all');
+      if (allStr) {
+        try {
+          const allArr = JSON.parse(allStr);
+          if (Array.isArray(allArr)) {
+            const updated = allArr.map((w: any) =>
+              w.id === worldId ? { ...w, members: (w.members || 0) + 1 } : w
+            );
+            localStorage.setItem('worlds_all', JSON.stringify(updated));
+          }
+        } catch {}
       }
     }
   }
   window.dispatchEvent(new Event('worlds_updated'));
 }
 
-export function denyJoinRequest(worldId: string, requesterId: string) {
-  const list = getPendingRequests(worldId).filter(r => r.id !== requesterId);
-  setPendingRequests(worldId, list);
+export async function denyJoinRequest(worldId: string, requesterId: string) {
+  try {
+    await apiClient.post(`/skrimchat-world-members/${worldId}/deny`, { requesterId });
+  } catch (err) {
+    console.warn(`Failed to deny join request via apiClient, running local fallback.`, err);
+    const list = getPendingRequestsLocal(worldId).filter(r => r.id !== requesterId);
+    localStorage.setItem(`worlds_pending_${worldId}`, JSON.stringify(list));
 
-  if (requesterId === 'currentUser') {
-    const world = getCommunities().find((c) => c.id === worldId);
-    useSignalStore.getState().addSignal({
-      type: 'world_join',
-      user: world?.name || 'World Admin',
-      avatar: '',
-      text: `declined your request to join ${world?.name || 'the world'}`,
-      time: 'Just now',
-      worldId,
-    });
+    if (requesterId === 'currentUser') {
+      const comms = await getCommunities();
+      const world = comms.find((c) => c.id === worldId);
+      useSignalStore.getState().addSignal({
+        type: 'world_join',
+        user: world?.name || 'World Admin',
+        avatar: '',
+        text: `declined your request to join ${world?.name || 'the world'}`,
+        time: 'Just now',
+        worldId,
+      });
+    }
   }
+  window.dispatchEvent(new Event('worlds_updated'));
 }
 
 export function useWorlds() {
-  const [communities, setCommunities] = useState(() => getCommunities());
+  const [communities, setCommunities] = useState<any[]>([]);
 
   useEffect(() => {
-    const handleUpdate = () => {
-      setCommunities(getCommunities());
+    const handleUpdate = async () => {
+      const data = await getCommunities();
+      setCommunities(data);
     };
+    handleUpdate();
     window.addEventListener('worlds_updated', handleUpdate);
     return () => window.removeEventListener('worlds_updated', handleUpdate);
   }, []);
@@ -286,55 +255,79 @@ export function useWorlds() {
 }
 
 export function useWorldMembership(worldId: string) {
-  const [joined, setJoined] = useState(() => safeParseArray<string>(safeGet('worlds_joined')).includes(worldId));
+  const [joined, setJoined] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [level, setLevel] = useState<string>('explorer');
+  const [daysActive, setDaysActive] = useState(0);
 
-  const [pending, setPending] = useState(() => hasRequestedJoin(worldId));
+  const fetchStatus = async () => {
+    try {
+      const res = await apiClient.get<any>(`/skrimchat-world-members/${worldId}/status`);
+      setJoined(res.joined);
+      setPending(res.pending);
+      setLevel(res.level || 'explorer');
+      setDaysActive(res.daysActive || 0);
+    } catch (err) {
+      console.warn(`Failed to fetch membership status for ${worldId} via apiClient, using local fallback.`, err);
+      const joinedStr = localStorage.getItem('worlds_joined') || '[]';
+      let joinedIds: string[] = [];
+      try { joinedIds = JSON.parse(joinedStr); } catch {}
+      const isJoined = joinedIds.includes(worldId);
+      setJoined(isJoined);
+      
+      setPending(hasRequestedJoinLocal(worldId));
+      setLevel(localStorage.getItem(`worlds_level_${worldId}`) || 'explorer');
 
-  const [level, setLevel] = useState<string>(() => safeGet(`worlds_level_${worldId}`) || 'explorer');
-
-  const [daysActive, setDaysActive] = useState(() => {
-    const joinedAt = safeGet(`worlds_joined_at_${worldId}`);
-    if (joinedAt) {
-      const parsed = parseInt(joinedAt, 10);
-      if (!isNaN(parsed)) return Math.floor((Date.now() - parsed) / (1000 * 60 * 60 * 24));
+      const joinedAt = localStorage.getItem(`worlds_joined_at_${worldId}`);
+      if (joinedAt) {
+        const parsed = parseInt(joinedAt, 10);
+        if (!isNaN(parsed)) {
+          setDaysActive(Math.floor((Date.now() - parsed) / (1000 * 60 * 60 * 24)));
+        }
+      } else {
+        setDaysActive(0);
+      }
     }
-    return 0;
-  });
+  };
 
   useEffect(() => {
-    const handleUpdate = () => {
-      const isJoined = safeParseArray<string>(safeGet('worlds_joined')).includes(worldId);
-      setJoined(isJoined);
-      setPending(hasRequestedJoin(worldId));
-      setLevel(safeGet(`worlds_level_${worldId}`) || 'explorer');
-    };
-    window.addEventListener('worlds_updated', handleUpdate);
-    return () => window.removeEventListener('worlds_updated', handleUpdate);
+    fetchStatus();
+    window.addEventListener('worlds_updated', fetchStatus);
+    return () => window.removeEventListener('worlds_updated', fetchStatus);
   }, [worldId]);
 
-  const requestJoin = () => {
-    requestJoinPrivateWorld(worldId);
+  const requestJoin = async () => {
+    await requestJoinPrivateWorld(worldId);
     setPending(true);
   };
 
-  const cancelRequest = () => {
-    cancelJoinRequest(worldId);
+  const cancelRequest = async () => {
+    await cancelJoinRequest(worldId);
     setPending(false);
   };
 
-  const join = () => {
-    const arr = safeParseArray<string>(safeGet('worlds_joined'));
+  const join = async () => {
+    let isRejoin = false;
+    try {
+      const res = await apiClient.post<any>('/skrimchat-world-members/join', { worldId });
+      isRejoin = res.isRejoin || false;
+    } catch (err) {
+      console.warn("Failed to join via apiClient, running local fallback.", err);
+      const joinedStr = localStorage.getItem('worlds_joined') || '[]';
+      let joinedIds: string[] = [];
+      try { joinedIds = JSON.parse(joinedStr); } catch {}
+      const prevStr = localStorage.getItem('worlds_prev_member') || '[]';
+      let prevIds: string[] = [];
+      try { prevIds = JSON.parse(prevStr); } catch {}
+      isRejoin = prevIds.includes(worldId);
 
-    // Check if previously joined to restore state
-    const prevArr = safeParseArray<string>(safeGet('worlds_prev_member'));
-    const isRejoin = prevArr.includes(worldId);
-
-    if (!arr.includes(worldId)) {
-      arr.push(worldId);
-      safeSet('worlds_joined', JSON.stringify(arr));
-      if (!isRejoin) {
-        safeSet(`worlds_level_${worldId}`, 'explorer');
-        safeSet(`worlds_joined_at_${worldId}`, Date.now().toString());
+      if (!joinedIds.includes(worldId)) {
+        joinedIds.push(worldId);
+        localStorage.setItem('worlds_joined', JSON.stringify(joinedIds));
+        if (!isRejoin) {
+          localStorage.setItem(`worlds_level_${worldId}`, 'explorer');
+          localStorage.setItem(`worlds_joined_at_${worldId}`, Date.now().toString());
+        }
       }
     }
     setJoined(true);
@@ -342,49 +335,54 @@ export function useWorldMembership(worldId: string) {
     return isRejoin;
   };
 
-  const leave = () => {
-    let arr = safeParseArray<string>(safeGet('worlds_joined'));
-    arr = arr.filter((id: string) => id !== worldId);
-    safeSet('worlds_joined', JSON.stringify(arr));
+  const leave = async () => {
+    try {
+      await apiClient.post('/skrimchat-world-members/leave', { worldId });
+    } catch (err) {
+      console.warn("Failed to leave via apiClient, running local fallback.", err);
+      const joinedStr = localStorage.getItem('worlds_joined') || '[]';
+      let joinedIds: string[] = [];
+      try { joinedIds = JSON.parse(joinedStr); } catch {}
+      joinedIds = joinedIds.filter((id) => id !== worldId);
+      localStorage.setItem('worlds_joined', JSON.stringify(joinedIds));
 
-    // record as previous member
-    const prevArr = safeParseArray<string>(safeGet('worlds_prev_member'));
-    if (!prevArr.includes(worldId)) {
-      prevArr.push(worldId);
-      safeSet('worlds_prev_member', JSON.stringify(prevArr));
+      const prevStr = localStorage.getItem('worlds_prev_member') || '[]';
+      let prevIds: string[] = [];
+      try { prevIds = JSON.parse(prevStr); } catch {}
+      if (!prevIds.includes(worldId)) {
+        prevIds.push(worldId);
+        localStorage.setItem('worlds_prev_member', JSON.stringify(prevIds));
+      }
     }
-
     setJoined(false);
     window.dispatchEvent(new Event('worlds_updated'));
   };
 
-  // Permanently deletes this world — only meant to be called by the world's
-  // creator/admin. Removes it from the global list, drops the current user's
-  // membership to it, and cleans up the per-world keys we created along the way.
-  const deleteWorld = () => {
-    const allStr = safeGet('worlds_all');
-    if (allStr) {
-      try {
-        const allArr = JSON.parse(allStr);
-        if (Array.isArray(allArr)) {
-          safeSet('worlds_all', JSON.stringify(allArr.filter((c: any) => c.id !== worldId)));
-        }
-      } catch {
-        // corrupted list — nothing more we can safely do here
+  const deleteWorld = async () => {
+    try {
+      await apiClient.delete(`/skrimchat-world-members/${worldId}`);
+    } catch (err) {
+      console.warn("Failed to delete world via apiClient, running local fallback.", err);
+      const allStr = localStorage.getItem('worlds_all');
+      if (allStr) {
+        try {
+          const allArr = JSON.parse(allStr);
+          if (Array.isArray(allArr)) {
+            localStorage.setItem('worlds_all', JSON.stringify(allArr.filter((c: any) => c.id !== worldId)));
+          }
+        } catch {}
       }
+      let joinedIds = JSON.parse(localStorage.getItem('worlds_joined') || '[]');
+      joinedIds = joinedIds.filter((id: string) => id !== worldId);
+      localStorage.setItem('worlds_joined', JSON.stringify(joinedIds));
+
+      let prevIds = JSON.parse(localStorage.getItem('worlds_prev_member') || '[]');
+      prevIds = prevIds.filter((id: string) => id !== worldId);
+      localStorage.setItem('worlds_prev_member', JSON.stringify(prevIds));
+
+      localStorage.removeItem(`worlds_level_${worldId}`);
+      localStorage.removeItem(`worlds_joined_at_${worldId}`);
     }
-
-    let joinedArr = safeParseArray<string>(safeGet('worlds_joined'));
-    joinedArr = joinedArr.filter((id: string) => id !== worldId);
-    safeSet('worlds_joined', JSON.stringify(joinedArr));
-
-    let prevArr = safeParseArray<string>(safeGet('worlds_prev_member'));
-    prevArr = prevArr.filter((id: string) => id !== worldId);
-    safeSet('worlds_prev_member', JSON.stringify(prevArr));
-
-    safeRemove(`worlds_level_${worldId}`);
-    safeRemove(`worlds_joined_at_${worldId}`);
-
     setJoined(false);
     window.dispatchEvent(new Event('worlds_updated'));
   };

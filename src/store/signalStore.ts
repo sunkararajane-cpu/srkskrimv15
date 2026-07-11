@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { apiClient } from '../lib/apiClient';
 
 export interface Signal {
   id: string;
@@ -50,9 +51,10 @@ interface SignalState {
   
   // Real signals array and actions
   signals: Signal[];
-  addSignal: (signal: Omit<Signal, 'id' | 'isRead'>) => void;
-  markSignalAsRead: (id: string) => void;
-  markAllAsRead: () => void;
+  fetchSignals: () => Promise<void>;
+  addSignal: (signal: Omit<Signal, 'id' | 'isRead'>) => Promise<void>;
+  markSignalAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
 }
 
 const playChime = () => {
@@ -92,49 +94,7 @@ const getInitialSignals = (): Signal[] => {
     const stored = localStorage.getItem('skrimchat_real_signals');
     if (stored) return JSON.parse(stored);
   } catch (e) {}
-
-  const seed: Signal[] = [
-    {
-      id: "notif_seed_1",
-      type: "pulse",
-      user: "Rahul Mehta",
-      avatar: "https://picsum.photos/100/100?random=1",
-      text: "pulsed your post ⚡",
-      time: "1h ago",
-      isRead: false
-    },
-    {
-      id: "notif_seed_2",
-      type: "comment",
-      user: "Kavya",
-      avatar: "https://picsum.photos/100/100?random=2",
-      text: "commented on your reel: \"Ekdum mast hai bhai 💜\"",
-      time: "2h ago",
-      isRead: false
-    },
-    {
-      id: "notif_seed_3",
-      type: "mention",
-      user: "Arjun",
-      avatar: "https://picsum.photos/100/100?random=3",
-      text: "mentioned you in a story: \"check this out!\"",
-      time: "3h ago",
-      isRead: true
-    },
-    {
-      id: "notif_seed_4",
-      type: "follow",
-      user: "Sneha Rao",
-      avatar: "https://picsum.photos/100/100?random=4",
-      text: "started following you",
-      time: "4h ago",
-      isRead: true
-    }
-  ];
-  try {
-    localStorage.setItem('skrimchat_real_signals', JSON.stringify(seed));
-  } catch (e) {}
-  return seed;
+  return []; // Mock seed data removed
 };
 
 export const useSignalStore = create<SignalState>((set, get) => ({
@@ -177,72 +137,108 @@ export const useSignalStore = create<SignalState>((set, get) => ({
   }),
 
   signals: getInitialSignals(),
-  addSignal: (signal) => set((state) => {
+  fetchSignals: async () => {
+    try {
+      const data = await apiClient.get<Signal[]>('/skrimchat-notifications');
+      set({ signals: data });
+    } catch (err) {
+      console.warn("Failed to fetch notifications via apiClient, keeping local state.", err);
+    }
+  },
+  addSignal: async (signal) => {
     const { type } = signal;
 
     // Respect existing preference toggles
-    if ((type === 'vibe_like' || type === 'pulse') && !state.likesSignalsEnabled) {
-      return {};
+    if ((type === 'vibe_like' || type === 'pulse') && !get().likesSignalsEnabled) {
+      return;
     }
-    if ((type === 'vibe_comment' || type === 'comment') && !state.commentsSignalsEnabled) {
-      return {};
+    if ((type === 'vibe_comment' || type === 'comment') && !get().commentsSignalsEnabled) {
+      return;
     }
-    if (type === 'vibe_reply' && !state.repliesSignalsEnabled) {
-      return {};
+    if (type === 'vibe_reply' && !get().repliesSignalsEnabled) {
+      return;
     }
-    if (type === 'new_vibe' && !state.globalVibeSignalsEnabled) {
-      return {};
+    if (type === 'new_vibe' && !get().globalVibeSignalsEnabled) {
+      return;
     }
-    if (type === 'grind_reminder' && !state.blazeRunRemindersEnabled) {
-      return {};
+    if (type === 'grind_reminder' && !get().blazeRunRemindersEnabled) {
+      return;
     }
-    if (type === 'lang_match' && !state.languageMatchSignalsEnabled) {
-      return {};
+    if (type === 'lang_match' && !get().languageMatchSignalsEnabled) {
+      return;
     }
 
-    const newNotif: Signal = {
-      ...signal,
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      isRead: false,
-      createdAt: signal.createdAt ?? Date.now(),
-    };
-
-    const updated = [newNotif, ...state.signals];
     try {
-      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
-    } catch (e) {}
-    
-    const unread = updated.filter(n => !n.isRead).length;
-    localStorage.setItem('skrimchat_signal_unread', String(unread));
-    window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
+      const newNotif = await apiClient.post<Signal>('/skrimchat-notifications', signal);
+      set((state) => {
+        const updated = [newNotif, ...state.signals];
+        const unread = updated.filter(n => !n.isRead).length;
+        localStorage.setItem('skrimchat_signal_unread', String(unread));
+        window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
+        return { signals: updated };
+      });
+    } catch (err) {
+      console.warn("Failed to create notification on backend, saving locally.", err);
+      const newNotif: Signal = {
+        ...signal,
+        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        isRead: false,
+        createdAt: signal.createdAt ?? Date.now(),
+      };
 
-    return { signals: updated };
-  }),
-  markSignalAsRead: (id) => set((state) => {
-    const updated = state.signals.map((n) =>
-      n.id === id ? { ...n, isRead: true } : n
-    );
+      set((state) => {
+        const updated = [newNotif, ...state.signals];
+        try {
+          localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
+        } catch (e) {}
+        
+        const unread = updated.filter(n => !n.isRead).length;
+        localStorage.setItem('skrimchat_signal_unread', String(unread));
+        window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
+
+        return { signals: updated };
+      });
+    }
+  },
+  markSignalAsRead: async (id) => {
     try {
-      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
-    } catch (e) {}
+      await apiClient.post(`/skrimchat-notifications/${id}/read`, {});
+    } catch (err) {
+      console.warn(`Failed to mark notification ${id} as read on backend.`, err);
+    }
+    set((state) => {
+      const updated = state.signals.map((n) =>
+        n.id === id ? { ...n, isRead: true } : n
+      );
+      try {
+        localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
+      } catch (e) {}
 
-    const unread = updated.filter(n => !n.isRead).length;
-    localStorage.setItem('skrimchat_signal_unread', String(unread));
-    window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
+      const unread = updated.filter(n => !n.isRead).length;
+      localStorage.setItem('skrimchat_signal_unread', String(unread));
+      window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
 
-    return { signals: updated };
-  }),
-  markAllAsRead: () => set((state) => {
-    const updated = state.signals.map((n) => ({ ...n, isRead: true }));
+      return { signals: updated };
+    });
+  },
+  markAllAsRead: async () => {
     try {
-      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
-    } catch (e) {}
+      await apiClient.post('/skrimchat-notifications/read-all', {});
+    } catch (err) {
+      console.warn("Failed to mark all notifications as read on backend.", err);
+    }
+    set((state) => {
+      const updated = state.signals.map((n) => ({ ...n, isRead: true }));
+      try {
+        localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
+      } catch (e) {}
 
-    localStorage.setItem('skrimchat_signal_unread', '0');
-    window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: 0 }));
+      localStorage.setItem('skrimchat_signal_unread', '0');
+      window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: 0 }));
 
-    return { signals: updated };
-  }),
+      return { signals: updated };
+    });
+  },
 }));
 
 // Mock functions

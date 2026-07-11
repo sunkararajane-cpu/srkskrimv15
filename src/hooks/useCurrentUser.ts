@@ -1,39 +1,35 @@
 import { useState, useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { apiClient } from '../lib/apiClient';
 
 export const useCurrentUser = () => {
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    const stored = localStorage.getItem('skrimchat_user');
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch (e) {
-        console.error("Error parsing stored user", e);
-      }
-    }
-    return null;
-  });
+  const authUser = useAuthStore((state) => state.user);
+  const [dbUser, setDbUser] = useState<any>(null);
 
   useEffect(() => {
-    let t: NodeJS.Timeout;
-    const fetchUser = () => {
-      const stored = localStorage.getItem('skrimchat_user');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          t = setTimeout(() => setCurrentUser(parsed), 0);
-        } catch (e) {
-          console.error("Error parsing stored user", e);
-        }
+    if (!authUser) {
+      setDbUser(null);
+      return;
+    }
+
+    const fetchUser = async () => {
+      try {
+        const data = await apiClient.get<any>('/skrimchat-users');
+        setDbUser(data);
+      } catch (err) {
+        console.warn("TODO: Real backend GET /skrimchat-users not ready. Using authStore user.", err);
       }
     };
-    
-    // Listen for custom event to update when profile changes
-    window.addEventListener('skrimchat_user_updated', fetchUser);
-    return () => {
-      window.removeEventListener('skrimchat_user_updated', fetchUser);
-      clearTimeout(t);
-    };
-  }, []);
 
-  return currentUser;
+    fetchUser();
+  }, [authUser]);
+
+  if (!authUser) return null;
+  return {
+    ...authUser,
+    ...dbUser,
+    username: dbUser?.username || authUser.username || '',
+    email: dbUser?.email || authUser.email || '',
+  };
 };
+

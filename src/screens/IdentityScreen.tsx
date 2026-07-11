@@ -180,6 +180,7 @@ export default function IdentityScreen() {
   const navigate = useNavigate();
   const user = useCurrentUser();
   const [posts, setPosts] = useState<any[]>([]);
+  const [sortedPosts, setSortedPosts] = useState<any[]>([]);
   const [userVibes, setUserVibes] = useState<any[]>([]);
   const [savedItems, setSavedItems] = useState<any[]>([]);
   const [repostItems, setRepostItems] = useState<any[]>([]);
@@ -191,6 +192,20 @@ export default function IdentityScreen() {
   const [selectedMedia, setSelectedMedia] = useState<{index: number, type: 'post'|'vibe'|'saved'|'repost'|'tagged'|string, urls: string[], users?: any[], isSavedTab?: boolean} | null>(null);
   const pinnedPostIds = usePinnedPosts(user?.username || '');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const sortPosts = async () => {
+      const sorted = await sortWithPinnedFirst(posts, user?.username || '');
+      if (active) {
+        setSortedPosts(sorted);
+      }
+    };
+    sortPosts();
+    return () => {
+      active = false;
+    };
+  }, [posts, pinnedPostIds, user?.username]);
 
   useEffect(() => {
     loadVibes();
@@ -1222,7 +1237,6 @@ export default function IdentityScreen() {
         {activeTab === 'posts' && (
           <div className="grid grid-cols-3 gap-0.5 pt-0.5">
             {(() => {
-              const sortedPosts = sortWithPinnedFirst(posts, user?.username || '');
               const sortedUrls = sortedPosts.map((post, idx) => {
                 if (post.type === 'video_thumb' || post.videoSrc) {
                   return post.thumbnail || post.image || post.videoSrc || '';

@@ -3087,6 +3087,7 @@ export default function PulseScreen() {
   const [activeSendPostId, setActiveSendPostId] = useState<string | null>(null);
   const [storyBehindPostId, setStoryBehindPostId] = useState<string | null>(null);
   const [commentControlsPostId, setCommentControlsPostId] = useState<string | null>(null);
+  const [commentControlsSettings, setCommentControlsSettings] = useState<any>(null);
 
   let editedTexts: Record<string, string> = {};
   try {
@@ -3208,14 +3209,21 @@ export default function PulseScreen() {
     setSearchParams(searchParams, { replace: true });
   }, [searchParams]);
 
-  // Safe comment controls validator
+  // Safe comment controls validator & settings loader
   useEffect(() => {
     if (commentControlsPostId) {
       const ccPost = posts.find(p => p.id === commentControlsPostId);
       const isMyPost = ccPost && (ccPost.handle === `@${currentUser?.handle}` || ccPost.handle === currentUser?.handle);
       if (!ccPost || !isMyPost) {
         setCommentControlsPostId(null);
+        setCommentControlsSettings(null);
+      } else {
+        getPostModerationSettings(commentControlsPostId).then(settings => {
+          setCommentControlsSettings(settings);
+        });
       }
+    } else {
+      setCommentControlsSettings(null);
     }
   }, [commentControlsPostId, posts, currentUser]);
 
@@ -3375,14 +3383,16 @@ export default function PulseScreen() {
         myReactionId: myReactions[p.id] || null,
       }));
 
+      const muted = await getMutedUsers();
+      const blocked = await getBlockedUsers();
+
       if (append) {
         setPosts(prev => {
           let deletedIds: string[] = [];
           try {
             deletedIds = JSON.parse(localStorage.getItem('skrimchat_deleted_post_ids') || '[]');
           } catch (e) {}
-          const muted = getMutedUsers();
-          const blocked = getBlockedUsers();
+
           const filterPost = (p: any) => {
             if (p && p.id && deletedIds.includes(p.id)) return false;
             const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
@@ -3412,8 +3422,6 @@ export default function PulseScreen() {
         } catch (e) {}
 
         // Filter out posts from muted or blocked users as well as deleted ones
-        const muted = getMutedUsers();
-        const blocked = getBlockedUsers();
         const filterPost = (p: any) => {
           if (p && p.id && deletedIds.includes(p.id)) return false;
           const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
@@ -3528,8 +3536,8 @@ export default function PulseScreen() {
     try {
       deletedIds = JSON.parse(localStorage.getItem('skrimchat_deleted_post_ids') || '[]');
     } catch (e) {}
-    const muted = getMutedUsers();
-    const blocked = getBlockedUsers();
+    const muted = await getMutedUsers();
+    const blocked = await getBlockedUsers();
     const filterPost = (p: any) => {
       if (p && p.id && deletedIds.includes(p.id)) return false;
       const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
@@ -4083,7 +4091,8 @@ export default function PulseScreen() {
           const ccPost = posts.find(p => p.id === commentControlsPostId);
           const isMyPost = ccPost && (ccPost.handle === `@${currentUser?.handle}` || ccPost.handle === currentUser?.handle);
           if (!ccPost || !isMyPost) return null;
-          const settings = getPostModerationSettings(commentControlsPostId);
+          const settings = commentControlsSettings;
+          if (!settings) return null;
           return (
             <motion.div key="cc-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 z-[300] backdrop-blur-sm" onClick={() => setCommentControlsPostId(null)}>

@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { apiClient } from '../lib/apiClient';
 
 export interface ModerationLogEntry {
   id: string;
@@ -38,31 +39,49 @@ function persistLog(entries: ModerationLogEntry[]) {
 
 interface ModerationLogState {
   entries: ModerationLogEntry[];
-  hydrate: () => void;
+  hydrate: () => Promise<void>;
   /**
    * Records an auto-block event. This is fired automatically by the
    * moderation gate the instant flagged media is rejected — it's a
    * read-only audit record for the SkrimChat team, not an approval gate.
    * The content is already blocked by the time this is called.
    */
-  logAutoBlock: (entry: Omit<ModerationLogEntry, 'id' | 'createdAt'>) => void;
-  clear: () => void;
+  logAutoBlock: (entry: Omit<ModerationLogEntry, 'id' | 'createdAt'>) => Promise<void>;
+  clear: () => Promise<void>;
 }
 
 export const useModerationLogStore = create<ModerationLogState>((set, get) => ({
   entries: [],
-  hydrate: () => set({ entries: loadLog() }),
-  logAutoBlock: (entry) => {
+  hydrate: async () => {
+    try {
+      const logs = await apiClient.get<ModerationLogEntry[]>('/skrimchat-moderation-logs');
+      set({ entries: logs || [] });
+    } catch (err) {
+      console.warn("Failed to fetch moderation logs from apiClient, fallback locally.", err);
+      set({ entries: loadLog() });
+    }
+  },
+  logAutoBlock: async (entry) => {
     const newEntry: ModerationLogEntry = {
       ...entry,
       id: `modlog_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       createdAt: Date.now(),
     };
+    try {
+      await apiClient.post('/skrimchat-moderation-logs', newEntry);
+    } catch (err) {
+      console.warn("Failed to log auto block via apiClient, saving locally.", err);
+    }
     const next = [newEntry, ...get().entries];
     set({ entries: next });
     persistLog(next);
   },
-  clear: () => {
+  clear: async () => {
+    try {
+      await apiClient.delete('/skrimchat-moderation-logs');
+    } catch (err) {
+      console.warn("Failed to clear moderation logs via apiClient.", err);
+    }
     set({ entries: [] });
     persistLog([]);
   },

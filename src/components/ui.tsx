@@ -68,13 +68,22 @@ export function AvatarWithRing({ src, size = "md", isStory = false, className, s
 export function FollowButton({ username, initialCount = 0, variant = 'default', className }: { username: string, initialCount?: number, variant?: 'default'|'profile', className?: string }) {
   const [following, setFollowing] = useState(false);
 
+  const checkFollowing = async () => {
+    try {
+      const isF = await isFollowing(username);
+      setFollowing(isF);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
-    setFollowing(isFollowing(username));
+    checkFollowing();
     
     let t: NodeJS.Timeout;
     const handleUpdate = () => {
       t = setTimeout(() => {
-        setFollowing(isFollowing(username));
+        checkFollowing();
       }, 0);
     };
     window.addEventListener('skrimchat_social_graph_updated', handleUpdate);
@@ -84,13 +93,19 @@ export function FollowButton({ username, initialCount = 0, variant = 'default', 
     };
   }, [username]);
 
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (following) {
-      unfollowUser(username, initialCount);
-    } else {
-      followUser(username, initialCount);
-      useSignalStore.getState().requestPushPermission();
+    try {
+      if (following) {
+        await unfollowUser(username, initialCount);
+        setFollowing(false);
+      } else {
+        await followUser(username, initialCount);
+        setFollowing(true);
+        useSignalStore.getState().requestPushPermission();
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 

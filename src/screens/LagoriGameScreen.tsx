@@ -106,13 +106,13 @@ export default function LagoriGameScreen() {
     }));
   }, []);
 
-  const handleGameOver = useCallback(() => {
+  const handleGameOver = useCallback(async () => {
      setAppPhase('GAMEOVER');
      const s = engineRef.current;
      const currentBest = parseInt(localStorage.getItem('lagori_best') || '0');
      let isNewBest = false;
      
-     let newRank = saveGameScore('lagori', s.score, currentUser?.name || 'You', currentUser?.avatar);
+     let newRank = await saveGameScore('lagori', s.score, currentUser?.name || 'You', currentUser?.avatar);
      setCoinsEarned(coinsForScore('lagori', s.score));
 
      if (s.score > currentBest) {

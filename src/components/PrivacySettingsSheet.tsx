@@ -18,31 +18,45 @@ interface Props {
 type SubView = null | 'blocked' | 'muted' | 'follow_requests' | 'keyword_filters' | 'restricted' | 'hidden_words';
 
 export const PrivacySettingsSheet = ({ onClose }: Props) => {
-  const [isPrivate, setIsPrivate] = useState(isPrivateAccount());
-  const [blockedUsers, setBlockedUsers] = useState<string[]>(getBlockedUsers());
-  const [mutedUsers, setMutedUsers] = useState<string[]>(getMutedUsers());
-  const [followRequests, setFollowRequests] = useState<any[]>(getFollowRequests());
-  const [restrictedUsers, setRestrictedUsers] = useState<string[]>(getRestrictedUsers());
-  const [keywordFilters, setKeywordFilters] = useState<string[]>(getKeywordFilters());
-  const [hiddenWords, setHiddenWords] = useState<string[]>(getHiddenWords());
-  const [sensitiveFilter, setSensitiveFilter] = useState(getSensitiveContentFilter());
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+  const [mutedUsers, setMutedUsers] = useState<string[]>([]);
+  const [followRequests, setFollowRequests] = useState<any[]>([]);
+  const [restrictedUsers, setRestrictedUsers] = useState<string[]>([]);
+  const [keywordFilters, setKeywordFilters] = useState<string[]>([]);
+  const [hiddenWords, setHiddenWords] = useState<string[]>([]);
+  const [sensitiveFilter, setSensitiveFilter] = useState<boolean>(false);
   const [subView, setSubView] = useState<SubView>(null);
   const [toast, setToast] = useState('');
   const [newKeyword, setNewKeyword] = useState('');
   const [newHiddenWord, setNewHiddenWord] = useState('');
 
-  const refresh = () => {
-    setBlockedUsers(getBlockedUsers());
-    setMutedUsers(getMutedUsers());
-    setFollowRequests(getFollowRequests());
-    setIsPrivate(isPrivateAccount());
-    setRestrictedUsers(getRestrictedUsers());
-    setKeywordFilters(getKeywordFilters());
-    setHiddenWords(getHiddenWords());
-    setSensitiveFilter(getSensitiveContentFilter());
+  const refresh = async () => {
+    try {
+      const isPriv = await isPrivateAccount();
+      const blocked = await getBlockedUsers();
+      const muted = await getMutedUsers();
+      const reqs = await getFollowRequests();
+      const restricted = await getRestrictedUsers();
+      const keywords = await getKeywordFilters();
+      const hidden = await getHiddenWords();
+      const sens = await getSensitiveContentFilter();
+
+      setIsPrivate(isPriv);
+      setBlockedUsers(blocked);
+      setMutedUsers(muted);
+      setFollowRequests(reqs);
+      setRestrictedUsers(restricted);
+      setKeywordFilters(keywords);
+      setHiddenWords(hidden);
+      setSensitiveFilter(sens);
+    } catch (e) {
+      console.error("Failed to load privacy settings", e);
+    }
   };
 
   useEffect(() => {
+    refresh();
     window.addEventListener('skrimchat_privacy_updated', refresh);
     window.addEventListener('skrimchat_follow_requests_updated', refresh);
     return () => {
@@ -56,35 +70,55 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
     setTimeout(() => setToast(''), 2500);
   };
 
-  const handlePrivateToggle = () => {
+  const handlePrivateToggle = async () => {
     const next = !isPrivate;
-    setPrivateAccount(next);
-    setIsPrivate(next);
-    showToast(next ? '🔒 Account set to Private' : '🌐 Account set to Public');
+    try {
+      await setPrivateAccount(next);
+      setIsPrivate(next);
+      showToast(next ? '🔒 Account set to Private' : '🌐 Account set to Public');
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleUnblock = (username: string) => {
-    unblockUser(username);
-    setBlockedUsers(prev => prev.filter(u => u !== username));
-    showToast(`@${username} unblocked`);
+  const handleUnblock = async (username: string) => {
+    try {
+      await unblockUser(username);
+      setBlockedUsers(prev => prev.filter(u => u !== username));
+      showToast(`@${username} unblocked`);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleUnmute = (username: string) => {
-    unmuteUser(username);
-    setMutedUsers(prev => prev.filter(u => u !== username));
-    showToast(`@${username} unmuted`);
+  const handleUnmute = async (username: string) => {
+    try {
+      await unmuteUser(username);
+      setMutedUsers(prev => prev.filter(u => u !== username));
+      showToast(`@${username} unmuted`);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleAccept = (requestId: string) => {
-    acceptFollowRequest(requestId);
-    refresh();
-    showToast('Follow request accepted ✓');
+  const handleAccept = async (requestId: string) => {
+    try {
+      await acceptFollowRequest(requestId);
+      await refresh();
+      showToast('Follow request accepted ✓');
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const handleDecline = (requestId: string) => {
-    declineFollowRequest(requestId);
-    refresh();
-    showToast('Follow request declined');
+  const handleDecline = async (requestId: string) => {
+    try {
+      await declineFollowRequest(requestId);
+      await refresh();
+      showToast('Follow request declined');
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -155,117 +189,115 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                     <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${isPrivate ? 'left-6' : 'left-0.5'}`} />
                   </button>
                 </div>
-                {isPrivate && followRequests.length > 0 && (
-                  <button
-                    onClick={() => setSubView('follow_requests')}
-                    className="mt-3 w-full flex items-center justify-between bg-[#B026FF]/10 border border-[#B026FF]/20 rounded-xl px-3 py-2"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-[#B026FF]" />
-                      <span className="text-sm text-white font-semibold">Follow Requests</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="bg-[#B026FF] text-white text-xs font-bold px-2 py-0.5 rounded-full">{followRequests.length}</span>
-                      <ChevronRight className="w-4 h-4 text-[#B026FF]" />
-                    </div>
-                  </button>
-                )}
               </div>
 
-              {/* Blocked Users */}
+              {/* Sub-menu triggers */}
+              <button
+                onClick={() => setSubView('follow_requests')}
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Users className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Follow Requests</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      {followRequests.length > 0 ? `${followRequests.length} pending requests` : 'Manage who can follow you'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
+              </button>
+
               <button
                 onClick={() => setSubView('blocked')}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition border border-white/5"
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                  <UserX className="w-5 h-5 text-red-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                    <UserX className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Blocked Users</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      {blockedUsers.length > 0 ? `${blockedUsers.length} users blocked` : 'Manage blocked profiles'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-white">Blocked Users</p>
-                  <p className="text-white/40 text-xs mt-0.5">
-                    {blockedUsers.length === 0 ? 'No one blocked' : `${blockedUsers.length} user${blockedUsers.length > 1 ? 's' : ''} blocked`}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/30" />
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
               </button>
 
-              {/* Muted Users */}
               <button
                 onClick={() => setSubView('muted')}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition border border-white/5"
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
-                  <VolumeX className="w-5 h-5 text-orange-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <VolumeX className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Muted Users</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      {mutedUsers.length > 0 ? `${mutedUsers.length} users muted` : 'Mute posts/stories from accounts'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-white">Muted Users</p>
-                  <p className="text-white/40 text-xs mt-0.5">
-                    {mutedUsers.length === 0 ? 'No one muted' : `${mutedUsers.length} user${mutedUsers.length > 1 ? 's' : ''} muted`}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/30" />
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
               </button>
 
-              {/* Info */}
-              <div className="flex gap-2 bg-white/5 rounded-2xl p-4 border border-white/5">
-                <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
-                <p className="text-white/40 text-xs leading-relaxed">
-                  Blocked users cannot see your profile, posts, or message you. Muted users can still follow and message you — you just won't see their posts in your feed.
-                </p>
-              </div>
-
-              {/* ── Moderation Section ── */}
-              <p className="text-white/40 text-xs font-semibold uppercase tracking-widest px-1 pt-2">Content Moderation</p>
-
-              {/* Keyword Filters */}
-              <button
-                onClick={() => setSubView('keyword_filters')}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition border border-white/5"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                  <Filter className="w-5 h-5 text-blue-400" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-white">Keyword Filters</p>
-                  <p className="text-white/40 text-xs mt-0.5">
-                    {keywordFilters.length === 0 ? 'No words filtered' : `${keywordFilters.length} word${keywordFilters.length > 1 ? 's' : ''} filtered`}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/30" />
-              </button>
-
-              {/* Restrict Mode */}
               <button
                 onClick={() => setSubView('restricted')}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition border border-white/5"
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
-                  <Ban className="w-5 h-5 text-yellow-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center shrink-0">
+                    <Ban className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Restricted Users</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      {restrictedUsers.length > 0 ? `${restrictedUsers.length} users restricted` : 'Restrict accounts quietly'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-white">Restricted Users</p>
-                  <p className="text-white/40 text-xs mt-0.5">
-                    {restrictedUsers.length === 0 ? 'No one restricted' : `${restrictedUsers.length} user${restrictedUsers.length > 1 ? 's' : ''} restricted`}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/30" />
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
               </button>
 
-              {/* Hidden Words */}
+              <button
+                onClick={() => setSubView('keyword_filters')}
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <Filter className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Keyword Filters</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      {keywordFilters.length > 0 ? `${keywordFilters.length} filter keywords` : 'Block comments with custom words'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
+              </button>
+
               <button
                 onClick={() => setSubView('hidden_words')}
-                className="flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition border border-white/5"
+                className="flex items-center justify-between p-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition group text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
-                  <EyeOff className="w-5 h-5 text-purple-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+                    <EyeOff className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Hidden Words</p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      Sensitive filter & custom post-hiding words
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-white">Hidden Words</p>
-                  <p className="text-white/40 text-xs mt-0.5">
-                    {hiddenWords.length === 0 && !sensitiveFilter ? 'No content filtered' : `${hiddenWords.length} word${hiddenWords.length !== 1 ? 's' : ''} hidden${sensitiveFilter ? ' · Sensitive filter on' : ''}`}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-white/30" />
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
               </button>
             </>
           )}
@@ -274,12 +306,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
           {subView === 'blocked' && (
             <>
               {blockedUsers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                    <UserX className="w-8 h-8 text-white/20" />
-                  </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <UserX className="w-8 h-8 text-white/20 mb-3" />
                   <p className="text-white font-bold mb-1">No blocked users</p>
-                  <p className="text-white/40 text-sm">Users you block will appear here</p>
+                  <p className="text-white/40 text-sm">When you block someone, they cannot see your profile</p>
                 </div>
               ) : blockedUsers.map(username => (
                 <div key={username} className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
@@ -294,7 +324,7 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                   </div>
                   <button
                     onClick={() => handleUnblock(username)}
-                    className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/10 transition active:scale-95"
+                    className="px-3 py-1.5 rounded-full bg-[#B026FF]/10 hover:bg-[#B026FF]/20 text-[#B026FF] text-xs font-bold border border-[#B026FF]/20 transition active:scale-95"
                   >
                     Unblock
                   </button>
@@ -307,12 +337,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
           {subView === 'muted' && (
             <>
               {mutedUsers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                    <VolumeX className="w-8 h-8 text-white/20" />
-                  </div>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <VolumeX className="w-8 h-8 text-white/20 mb-3" />
                   <p className="text-white font-bold mb-1">No muted users</p>
-                  <p className="text-white/40 text-sm">Users you mute will appear here</p>
+                  <p className="text-white/40 text-sm">You can mute accounts from their posts or profiles</p>
                 </div>
               ) : mutedUsers.map(username => (
                 <div key={username} className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
@@ -323,7 +351,7 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-semibold truncate">@{username}</p>
-                    <p className="text-white/40 text-xs">Muted — posts hidden from your feed</p>
+                    <p className="text-white/40 text-xs">Muted</p>
                   </div>
                   <button
                     onClick={() => handleUnmute(username)}
@@ -340,20 +368,23 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
           {subView === 'keyword_filters' && (
             <>
               <div className="flex gap-2 bg-blue-500/10 rounded-2xl p-4 border border-blue-500/20 mb-1">
-                <Filter className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <AlertTriangle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
                 <p className="text-white/60 text-xs leading-relaxed">
-                  Comments and DMs containing these words will be hidden from your view automatically.
+                  Comments containing these words will be automatically hidden from your posts. Other users won't see them.
                 </p>
               </div>
-              {/* Add word input */}
+
+              {/* Add keyword input */}
               <div className="flex gap-2">
                 <input
                   value={newKeyword}
                   onChange={e => setNewKeyword(e.target.value)}
-                  onKeyDown={e => {
+                  onKeyDown={async e => {
                     if (e.key === 'Enter' && newKeyword.trim()) {
-                      addKeywordFilter(newKeyword.trim());
-                      setKeywordFilters(getKeywordFilters());
+                      const trimmed = newKeyword.trim();
+                      await addKeywordFilter(trimmed);
+                      const updated = await getKeywordFilters();
+                      setKeywordFilters(updated);
                       setNewKeyword('');
                       showToast('Keyword added');
                     }
@@ -362,10 +393,12 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-blue-400/50"
                 />
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!newKeyword.trim()) return;
-                    addKeywordFilter(newKeyword.trim());
-                    setKeywordFilters(getKeywordFilters());
+                    const trimmed = newKeyword.trim();
+                    await addKeywordFilter(trimmed);
+                    const updated = await getKeywordFilters();
+                    setKeywordFilters(updated);
                     setNewKeyword('');
                     showToast('Keyword added');
                   }}
@@ -386,9 +419,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                     <p className="text-white font-semibold">{word}</p>
                   </div>
                   <button
-                    onClick={() => {
-                      removeKeywordFilter(word);
-                      setKeywordFilters(getKeywordFilters());
+                    onClick={async () => {
+                      await removeKeywordFilter(word);
+                      const updated = await getKeywordFilters();
+                      setKeywordFilters(updated);
                       showToast(`"${word}" removed`);
                     }}
                     className="w-8 h-8 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center hover:bg-red-500/30 transition"
@@ -427,9 +461,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                     <p className="text-white/40 text-xs">Restricted · comments hidden from others</p>
                   </div>
                   <button
-                    onClick={() => {
-                      unrestrictUser(username);
-                      setRestrictedUsers(getRestrictedUsers());
+                    onClick={async () => {
+                      await unrestrictUser(username);
+                      const updated = await getRestrictedUsers();
+                      setRestrictedUsers(updated);
                       showToast(`@${username} unrestricted`);
                     }}
                     className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/10 transition active:scale-95"
@@ -457,9 +492,9 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const next = !sensitiveFilter;
-                      setSensitiveContentFilter(next);
+                      await setSensitiveContentFilter(next);
                       setSensitiveFilter(next);
                       showToast(next ? '🙈 Sensitive filter on' : '👁 Sensitive filter off');
                     }}
@@ -477,10 +512,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                 <input
                   value={newHiddenWord}
                   onChange={e => setNewHiddenWord(e.target.value)}
-                  onKeyDown={e => {
+                  onKeyDown={async e => {
                     if (e.key === 'Enter' && newHiddenWord.trim()) {
                       const updated = [...hiddenWords, newHiddenWord.trim().toLowerCase()].filter((v, i, a) => a.indexOf(v) === i);
-                      saveHiddenWords(updated);
+                      await saveHiddenWords(updated);
                       setHiddenWords(updated);
                       setNewHiddenWord('');
                       showToast('Hidden word added');
@@ -490,10 +525,10 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                   className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-purple-400/50"
                 />
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!newHiddenWord.trim()) return;
                     const updated = [...hiddenWords, newHiddenWord.trim().toLowerCase()].filter((v, i, a) => a.indexOf(v) === i);
-                    saveHiddenWords(updated);
+                    await saveHiddenWords(updated);
                     setHiddenWords(updated);
                     setNewHiddenWord('');
                     showToast('Hidden word added');
@@ -516,9 +551,9 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                     <p className="text-white font-semibold">{word}</p>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       const updated = hiddenWords.filter(w => w !== word);
-                      saveHiddenWords(updated);
+                      await saveHiddenWords(updated);
                       setHiddenWords(updated);
                       showToast(`"${word}" removed`);
                     }}

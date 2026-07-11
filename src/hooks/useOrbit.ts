@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mockOrbitUsers, OrbitUser, MoodStatus, IcebreakerType } from '../lib/mock/mockOrbit';
+import { mockOrbitUsers, OrbitUser, MoodStatus, IcebreakerType, getOrbitUsersAsync, updatePresenceAsync } from '../lib/mock/mockOrbit';
 import { haversineDistanceKm, destinationPoint } from '../lib/geo';
 
 export type RadiusKm = 1 | 5 | 10 | 25 | 50;
@@ -117,6 +117,21 @@ export function useOrbit() {
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle');
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
+  const [users, setUsers] = useState<OrbitUser[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const u = await getOrbitUsersAsync();
+      setUsers(u || []);
+    } catch (e) {
+      console.error("Failed to fetch orbit users", e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const requestLocation = useCallback(() => {
     if (!('geolocation' in navigator)) {
       setLocationStatus('unsupported');
@@ -143,6 +158,10 @@ export function useOrbit() {
   }, []);
 
   useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers, coords]);
+
+  useEffect(() => {
     const handle = () => {
       setSettingsState(getSettings());
       setRequestsState(getRequests());
@@ -153,10 +172,14 @@ export function useOrbit() {
     return () => window.removeEventListener('orbit_updated', handle);
   }, []);
 
-  const updateSettings = useCallback((patch: Partial<OrbitSettings>) => {
+  const updateSettings = useCallback(async (patch: Partial<OrbitSettings>) => {
     const next = { ...getSettings(), ...patch };
     setSettingsStorage(next);
-  }, []);
+    if (patch.mood || patch.presence) {
+      await updatePresenceAsync(next.mood, next.presence);
+    }
+    await fetchUsers();
+  }, [fetchUsers]);
 
   // Filter mock users by radius, age, and female-safety mode.
   // When we have a real device location, distance is computed with genuine
@@ -164,7 +187,7 @@ export function useOrbit() {
   // real device position + their stored bearing/distance). Without location
   // permission, we fall back to the static mock distanceKm so the screen
   // still works.
-  const usersWithDistance = mockOrbitUsers.map((u) => {
+  const usersWithDistance = users.map((u) => {
     if (coords) {
       const userPoint = destinationPoint(coords.lat, coords.lon, u.bearingDeg, u.distanceKm);
       const liveDistanceKm = haversineDistanceKm(coords.lat, coords.lon, userPoint.lat, userPoint.lon);
@@ -257,5 +280,6 @@ export function useOrbit() {
     dailyLimit: DAILY_REQUEST_LIMIT_FREE,
     locationStatus,
     requestLocation,
+    isLoading,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, User } from 'lucide-react';
 import { MOCK_CHATS } from '../lib/mock/mockChatDirectory';
@@ -25,6 +25,34 @@ export function VeilInviteSheet({ isOpen, onClose, onSendInvite }: VeilInviteShe
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'connects' | 'followers' | 'following'>('all');
 
+  const [followerUsernames, setFollowerUsernames] = useState<Set<string>>(new Set());
+  const [followingUsernames, setFollowingUsernames] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadSocialData = async () => {
+      try {
+        const followers = await getFollowersArray();
+        const following = await getFollowingArray();
+        
+        const normalize = (u: any) => {
+          if (typeof u === 'string') {
+            return u.replace('@', '').trim().toLowerCase();
+          }
+          return '';
+        };
+
+        setFollowerUsernames(new Set(followers.map(normalize).filter(Boolean)));
+        setFollowingUsernames(new Set(following.map(normalize).filter(Boolean)));
+      } catch (err) {
+        console.error("Failed to load social graph data for Veil invite", err);
+      }
+    };
+
+    loadSocialData();
+  }, [isOpen]);
+
   // Dynamically resolve and build all contacts from the social graph
   const contacts = useMemo(() => {
     if (!isOpen) return [];
@@ -33,10 +61,6 @@ export function VeilInviteSheet({ isOpen, onClose, onSendInvite }: VeilInviteShe
     const addedUsernames = new Set<string>();
 
     const normalize = (u: string) => u.replace('@', '').trim().toLowerCase();
-
-    // Get current follower & following arrays from localStorage/social graph
-    const followerUsernames = new Set(getFollowersArray().map(normalize));
-    const followingUsernames = new Set(getFollowingArray().map(normalize));
 
     // 1. Add connects from MOCK_CHATS (excluding groups)
     MOCK_CHATS.forEach(chat => {
@@ -82,7 +106,7 @@ export function VeilInviteSheet({ isOpen, onClose, onSendInvite }: VeilInviteShe
     });
 
     // 3. Fallback for any other usernames in follower/following arrays that aren't represented yet
-    const allSocialUsernames = new Set([...followerUsernames, ...followingUsernames]);
+    const allSocialUsernames = new Set([...Array.from(followerUsernames), ...Array.from(followingUsernames)]);
     allSocialUsernames.forEach(uname => {
       const norm = normalize(uname);
       if (!addedUsernames.has(norm)) {
@@ -100,7 +124,7 @@ export function VeilInviteSheet({ isOpen, onClose, onSendInvite }: VeilInviteShe
     });
 
     return list;
-  }, [isOpen]);
+  }, [isOpen, followerUsernames, followingUsernames]);
 
   // Filter contacts by active tab and search query
   const filteredContacts = useMemo(() => {
@@ -195,7 +219,7 @@ export function VeilInviteSheet({ isOpen, onClose, onSendInvite }: VeilInviteShe
                     <div className="flex items-center gap-3">
                       {contact.avatar ? (
                         <img 
-                          src={contact.avatar || null} 
+                          src={contact.avatar || undefined} 
                           alt={contact.name} 
                           referrerPolicy="no-referrer"
                           className="w-9 h-9 rounded-full object-cover border border-white/10" 

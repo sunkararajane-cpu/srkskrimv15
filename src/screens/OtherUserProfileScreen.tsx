@@ -64,27 +64,57 @@ export default function OtherUserProfileScreen() {
   const isCreatorNotifEnabled = creatorSignalPrefs[user.username] !== false; // default true
   const showBell = followStatus.following && globalVibeSignalsEnabled;
 
-  useEffect(() => {
-    if (currentUser?.username && user?.username) {
-       setRequestSent(hasSentRequest(currentUser.username, user.username));
-    }
-  }, [currentUser, user]);
-
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [showReportSheet, setShowReportSheet] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [isUserBlocked, setIsUserBlocked] = useState(() => isBlocked(user.username?.replace('@', '') || ''));
-  const [isUserMuted, setIsUserMuted] = useState(() => isMuted(user.username?.replace('@', '') || ''));
-  const [isUserCloseFriend, setIsUserCloseFriend] = useState(() => isCloseFriend(user.username?.replace('@', '') || ''));
+  const [isUserBlocked, setIsUserBlocked] = useState(false);
+  const [isUserMuted, setIsUserMuted] = useState(false);
+  const [isUserCloseFriend, setIsUserCloseFriend] = useState(false);
   const pinnedPostIds = usePinnedPosts(user.username || '');
-  const mutualFollowers = React.useMemo(
-    () => getMutualFollowers(user.username || '', currentUser?.username),
-    [user.username, currentUser?.username, socialCounts.followers]
-  );
-  const peopleAlsoFollow = React.useMemo(
-    () => getPeopleAlsoFollow(user.username || '', currentUser?.username),
-    [user.username, currentUser?.username]
-  );
+  const [mutualFollowers, setMutualFollowers] = useState<any[]>([]);
+  const [peopleAlsoFollow, setPeopleAlsoFollow] = useState<any[]>([]);
+  const [postsGrid, setPostsGrid] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadProfileSettings = async () => {
+      const uname = user.username?.replace('@', '') || '';
+      try {
+        const blocked = await isBlocked(uname);
+        const muted = await isMuted(uname);
+        const close = await isCloseFriend(uname);
+        setIsUserBlocked(blocked);
+        setIsUserMuted(muted);
+        setIsUserCloseFriend(close);
+
+        if (currentUser?.username) {
+          const sent = await hasSentRequest(currentUser.username, user.username);
+          setRequestSent(sent);
+        }
+
+        const mfs = await getMutualFollowers(user.username || '', currentUser?.username);
+        setMutualFollowers(mfs);
+
+        const recs = await getPeopleAlsoFollow(user.username || '', currentUser?.username);
+        setPeopleAlsoFollow(recs);
+
+        // Grid posts
+        let userPosts = mockPosts.filter((p: any) => p.user === user.username || p.handle === user.username || p.handle === `@${user.username}`) as any[];
+        if (userPosts.length < 6) {
+          const extra = Array.from({ length: 6 - userPosts.length }).map((_, i) => ({
+            id: `fallback_${i}`,
+            image: `https://picsum.photos/400/400?random=${username}_${i}`,
+            type: i % 2 === 0 ? 'post' : 'vibe'
+          }));
+          userPosts = [...userPosts, ...extra] as any[];
+        }
+        const sortedGrid = await sortWithPinnedFirst(userPosts.slice(0, 9), user.username || '');
+        setPostsGrid(sortedGrid);
+      } catch (e) {
+        console.error("Failed to load profile social parameters:", e);
+      }
+    };
+    loadProfileSettings();
+  }, [user.username, currentUser?.username, socialCounts.followers, pinnedPostIds]);
 
   const handleMessageClick = () => {
     if (followStatus.following && followStatus.followedBy) {
@@ -97,23 +127,10 @@ export default function OtherUserProfileScreen() {
   };
 
   const handleShowToast = (msg: string) => {
-     setToastMessage(msg);
-     setTimeout(() => setToastMessage(null), 3000);
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(null), 3000);
   };
   
-  // Filter mock posts for this user (or just use generic mock posts if they don't have enough)
-  let userPosts = mockPosts.filter((p: any) => p.user === user.username || p.handle === user.username || p.handle === `@${user.username}`) as any[];
-  if (userPosts.length < 6) {
-    // Fill with random images to make the grid look good
-    const extra = Array.from({ length: 6 - userPosts.length }).map((_, i) => ({
-      id: `fallback_${i}`,
-      image: `https://picsum.photos/400/400?random=${username}_${i}`,
-      type: i % 2 === 0 ? 'post' : 'vibe'
-    }));
-    userPosts = [...userPosts, ...extra] as any[];
-  }
-
-  const postsGrid = sortWithPinnedFirst(userPosts.slice(0, 9), user.username || '');
   const selectedMediaUrls = postsGrid.map((p: any) => p.thumbnail || p.image || p.videoSrc || p.urls?.[0] || 'https://picsum.photos/400/400').filter(Boolean);
 
   return (
@@ -465,10 +482,10 @@ export default function OtherUserProfileScreen() {
                  <button onClick={() => {
                    const uname = user.username?.replace('@', '') || '';
                    if (isUserMuted) {
-                     unmuteUser(uname); setIsUserMuted(false);
+                     unmuteUser(uname).then(() => setIsUserMuted(false));
                      handleShowToast(`@${uname} unmuted`);
                    } else {
-                     muteUser(uname); setIsUserMuted(true);
+                     muteUser(uname).then(() => setIsUserMuted(true));
                      handleShowToast(`@${uname} muted — posts hidden from feed`);
                    }
                    setShowMoreMenu(false);
@@ -478,10 +495,10 @@ export default function OtherUserProfileScreen() {
                  </button>
                  <button onClick={() => {
                    const uname = user.username?.replace('@', '') || '';
-                   toggleCloseFriend(uname);
+                   toggleCloseFriend(uname).then(() => {
                    const nowClose = !isUserCloseFriend;
                    setIsUserCloseFriend(nowClose);
-                   handleShowToast(nowClose ? `@${uname} added to Close Friends ⭐` : `@${uname} removed from Close Friends`);
+                   handleShowToast(nowClose ? `@${uname} added to Close Friends ⭐` : `@${uname} removed from Close Friends`); });
                    setShowMoreMenu(false);
                  }} className={`flex items-center gap-3 w-full p-4 rounded-xl hover:bg-white/5 transition text-left font-medium ${isUserCloseFriend ? 'text-green-400' : 'text-white'}`}>
                    <Star className={`w-5 h-5 ${isUserCloseFriend ? 'fill-green-400' : ''}`} />
@@ -490,10 +507,10 @@ export default function OtherUserProfileScreen() {
                  <button onClick={() => {
                    const uname = user.username?.replace('@', '') || '';
                    if (isUserBlocked) {
-                     unblockUser(uname); setIsUserBlocked(false);
+                     unblockUser(uname).then(() => setIsUserBlocked(false));
                      handleShowToast(`@${uname} unblocked`);
                    } else {
-                     blockUser(uname); setIsUserBlocked(true);
+                     blockUser(uname).then(() => setIsUserBlocked(true));
                      handleShowToast(`@${uname} blocked`);
                    }
                    setShowMoreMenu(false);
@@ -533,7 +550,7 @@ export default function OtherUserProfileScreen() {
           bio: user.bio,
           followers: user.followers,
           score: stats.pulseScore,
-          posts: userPosts.length
+          posts: postsGrid.length
         }}
       />
       
