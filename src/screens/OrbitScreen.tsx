@@ -138,8 +138,27 @@ export default function OrbitScreen() {
       )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+        {locationStatus === 'idle' ? (
+          <div className="p-6 flex flex-col items-center justify-center text-center max-w-sm mx-auto my-12 glass-panel rounded-3xl border border-white/10 shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-[#00F0FF]/10 flex items-center justify-center mb-4">
+              <MapPin className="w-8 h-8 text-[#00F0FF] animate-pulse" />
+            </div>
+            <h3 className="text-lg font-black mb-2 text-white animate-fade-in">Privacy-First Orbit Discovery</h3>
+            <p className="text-xs text-white/60 leading-relaxed mb-6">
+              Orbit connects you with interesting people nearby. To protect your privacy, we only query your location just-in-time and never track you in the background.
+            </p>
+            <button
+              onClick={requestLocation}
+              className="w-full py-3 rounded-2xl font-bold text-sm text-black bg-gradient-to-r from-neon-purple to-neon-blue shadow-neon-purple transition active:scale-95"
+            >
+              Enable Nearby Discovery
+            </button>
+            <p className="text-[10px] text-white/30 mt-3">
+              You can withdraw consent or turn location off at any time.
+            </p>
+          </div>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-pulse">
             <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#00F0FF] animate-spin mb-4" />
             <p className="text-white/60 text-sm">Synchronizing orbital coordinate grid...</p>
           </div>

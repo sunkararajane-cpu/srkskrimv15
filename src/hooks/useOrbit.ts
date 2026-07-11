@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { mockOrbitUsers, OrbitUser, MoodStatus, IcebreakerType, getOrbitUsersAsync, updatePresenceAsync } from '../lib/mock/mockOrbit';
 import { haversineDistanceKm, destinationPoint } from '../lib/geo';
+import { requestCurrentPosition, LocationPermissionStatus } from '../lib/permissions/locationPermission';
 
 export type RadiusKm = 1 | 5 | 10 | 25 | 50;
 export type PresenceDuration = '15m' | '1h' | '3h' | 'always';
@@ -135,29 +136,32 @@ export function useOrbit() {
     }
   }, []);
 
+  const activeRequestRef = useRef<(() => void) | null>(null);
+
   const requestLocation = useCallback(() => {
-    if (!('geolocation' in navigator)) {
-      setLocationStatus('unsupported');
-      return;
+    if (activeRequestRef.current) {
+      activeRequestRef.current();
     }
     setLocationStatus('requesting');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+    const cleanup = requestCurrentPosition(
+      (coordsData) => {
+        setCoords(coordsData);
         setLocationStatus('granted');
       },
-      () => {
-        setLocationStatus('denied');
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 5 * 60 * 1000 }
+      (status) => {
+        setLocationStatus(status);
+      }
     );
+    activeRequestRef.current = cleanup;
   }, []);
 
-  // Orbit is the only screen that uses this hook, so mounting it already
-  // means the user actively opened Orbit — this does not fire on app load.
+  // Stop updates and cleanup on unmount
   useEffect(() => {
-    requestLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      if (activeRequestRef.current) {
+        activeRequestRef.current();
+      }
+    };
   }, []);
 
   useEffect(() => {
