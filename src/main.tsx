@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { simulateCreatorPost, simulateVibeLike, simulateVibeComment, scheduleGrindReminder, showGrindNotification, checkGrindRisk, simulatePulseReward, simulateLanguageMatchNotification } from './store/notificationStore';
 import { mockUsers, mockReels } from './lib/mock/mockData';
+import { loadConfig } from './lib/runtimeConfig';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -53,9 +54,67 @@ window.simulatePulseReward = (event = 'milestone_20') => simulatePulseReward(eve
 // @ts-ignore
 window.simulateLanguageMatch = (langs = ['te', 'en'], count = 15, force = true) => simulateLanguageMatchNotification(langs, count, force);
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+const container = document.getElementById('root')!;
+const root = createRoot(container);
+
+// Render simple, elegant loading state first
+root.render(
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    fontFamily: 'Inter, sans-serif',
+    backgroundColor: '#0b0f19',
+    color: '#e2e8f0'
+  }}>
+    <div style={{
+      width: '40px',
+      height: '40px',
+      border: '4px solid #1e293b',
+      borderTop: '4px solid #38bdf8',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite'
+    }} />
+    <p style={{ marginTop: '16px', fontSize: '14px', fontWeight: 500 }}>Initializing application...</p>
+    <style>{`
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
 );
 
+// Load runtime configuration before mounting App
+loadConfig()
+  .then(() => {
+    root.render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+  })
+  .catch((error) => {
+    root.render(
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        padding: '24px',
+        textAlign: 'center',
+        fontFamily: 'Inter, sans-serif',
+        backgroundColor: '#0b0f19',
+        color: '#ef4444'
+      }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+        <h1 style={{ fontSize: '20px', fontWeight: 600, color: '#f87171', marginBottom: '8px' }}>Initialization Failed</h1>
+        <p style={{ fontSize: '14px', color: '#94a3b8', maxWidth: '450px', lineHeight: '1.5' }}>
+          {error instanceof Error ? error.message : 'An error occurred while loading the application configuration.'}
+        </p>
+      </div>
+    );
+  });
