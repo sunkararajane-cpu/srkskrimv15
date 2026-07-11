@@ -7,7 +7,7 @@ import { useWorlds } from "../hooks/useWorldMembership";
 export function WorldSignalSettingsScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const worlds = useWorlds();
+  const { communities: worlds = [] } = useWorlds();
   const world = worlds.find((w) => w.id === id) || worlds[0];
 
   const [masterEnabled, setMasterEnabled] = useState(true);

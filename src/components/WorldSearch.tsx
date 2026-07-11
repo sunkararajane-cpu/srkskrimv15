@@ -34,7 +34,7 @@ const INTEREST_FILTERS = [
 
 export function WorldSearch({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
-  const allWorlds = useWorlds();
+  const { communities: allWorlds = [] } = useWorlds();
   const { savedSearches, addSearch, removeSearch, clearAll, hydrate } = useSearchStore();
 
   const [query, setQuery] = useState("");

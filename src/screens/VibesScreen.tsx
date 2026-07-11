@@ -2680,6 +2680,7 @@ export default function VibesScreen() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [muted, setMuted]           = useState(false);
   const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState('foryou');
   const [mood] = useState(() => localStorage.getItem('skrimchat_mood') || getDefaultMood());
@@ -2831,58 +2832,65 @@ export default function VibesScreen() {
 
     if (shouldReset) {
       setLoading(true);
+      setError(null);
       setCurrentIdx(0);
     }
 
     const timer = setTimeout(async () => {
-      if (activeFilter === 'myvibes') {
-        const sortedMyVibes = [...userVibes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setVibes(sortedMyVibes);
+      try {
+        if (activeFilter === 'myvibes') {
+          const sortedMyVibes = [...userVibes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setVibes(sortedMyVibes);
+          if (shouldReset) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        const baseOffset = filterSeedOffset[activeFilter] ?? 0;
+        const rOffset = refreshOffsets[activeFilter] ?? 0;
+        const offset = baseOffset + rOffset;
+
+        // For "trending" sort by score desc already; "new" = reverse freshness; "following"/"orbit" = seeded different set
+        let initial = await assembleVibesFeed(mood, offset, 12);
+
+        // Filter out reshared vibes from userVibes and sessionUserVibes unless we are in 'myvibes'
+        const nonReshareUserVibes = userVibes.filter(v => !v.isReshare);
+        const nonReshareSessionUserVibes = sessionUserVibes.filter(v => !v.isReshare);
+
+        if (activeFilter === 'trending') {
+          initial = [...initial].sort((a, b) => b.vibeScore - a.vibeScore);
+        } else if (activeFilter === 'new') {
+          initial = [...nonReshareUserVibes, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        } else if (activeFilter === 'foryou') {
+          const customVibesNotSession = nonReshareUserVibes.filter(uv => !nonReshareSessionUserVibes.some(sv => sv.id === uv.id));
+          initial = [...nonReshareSessionUserVibes, ...customVibesNotSession, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        } else {
+          initial = [...nonReshareUserVibes, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        }
+
+        let deletedVibeIds: string[] = [];
+        try {
+          deletedVibeIds = JSON.parse(localStorage.getItem('skrimchat_deleted_vibe_ids') || '[]');
+        } catch (e) {}
+
+        // De-duplicate initial set of vibes to prevent key collisions in React
+        const seen = new Set<string>();
+        const uniqueInitial = initial.filter(v => {
+          if (!v || !v.id) return false;
+          if (deletedVibeIds.includes(v.id)) return false;
+          if (seen.has(v.id)) return false;
+          seen.add(v.id);
+          return true;
+        });
+
+        setVibes(uniqueInitial);
         if (shouldReset) {
           setLoading(false);
         }
-        return;
-      }
-
-      const baseOffset = filterSeedOffset[activeFilter] ?? 0;
-      const rOffset = refreshOffsets[activeFilter] ?? 0;
-      const offset = baseOffset + rOffset;
-
-      // For "trending" sort by score desc already; "new" = reverse freshness; "following"/"orbit" = seeded different set
-      let initial = await assembleVibesFeed(mood, offset, 12);
-
-      // Filter out reshared vibes from userVibes and sessionUserVibes unless we are in 'myvibes'
-      const nonReshareUserVibes = userVibes.filter(v => !v.isReshare);
-      const nonReshareSessionUserVibes = sessionUserVibes.filter(v => !v.isReshare);
-
-      if (activeFilter === 'trending') {
-        initial = [...initial].sort((a, b) => b.vibeScore - a.vibeScore);
-      } else if (activeFilter === 'new') {
-        initial = [...nonReshareUserVibes, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      } else if (activeFilter === 'foryou') {
-        const customVibesNotSession = nonReshareUserVibes.filter(uv => !nonReshareSessionUserVibes.some(sv => sv.id === uv.id));
-        initial = [...nonReshareSessionUserVibes, ...customVibesNotSession, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      } else {
-        initial = [...nonReshareUserVibes, ...initial].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      }
-
-      let deletedVibeIds: string[] = [];
-      try {
-        deletedVibeIds = JSON.parse(localStorage.getItem('skrimchat_deleted_vibe_ids') || '[]');
-      } catch (e) {}
-
-      // De-duplicate initial set of vibes to prevent key collisions in React
-      const seen = new Set<string>();
-      const uniqueInitial = initial.filter(v => {
-        if (!v || !v.id) return false;
-        if (deletedVibeIds.includes(v.id)) return false;
-        if (seen.has(v.id)) return false;
-        seen.add(v.id);
-        return true;
-      });
-
-      setVibes(uniqueInitial);
-      if (shouldReset) {
+      } catch (err: any) {
+        console.error("Error loading vibes feed:", err);
+        setError(err.message || "Failed to load vibes");
         setLoading(false);
       }
     }, shouldReset ? 150 : 0);
@@ -3007,6 +3015,32 @@ export default function VibesScreen() {
     { id: 'orbit',   label: '📍 Orbit' },
     { id: 'myvibes',  label: '👤 My Vibes' },
   ];
+
+  if (error) {
+    return (
+      <div className="relative w-full h-full min-h-[500px] bg-black overflow-hidden flex flex-col items-center justify-center pt-16 text-center px-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center shadow-2xl">
+            <X className="w-8 h-8 text-red-500" />
+          </div>
+          <p className="text-red-400 font-semibold">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              setRefreshOffsets(prev => ({
+                ...prev,
+                [activeFilter]: (prev[activeFilter] ?? 0) + 1
+              }));
+            }}
+            className="px-6 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-sm font-bold transition-all border border-white/10"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

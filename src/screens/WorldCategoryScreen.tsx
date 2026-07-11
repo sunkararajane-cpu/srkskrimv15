@@ -102,7 +102,7 @@ const CATEGORIES = [
 export function WorldCategoryScreen() {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
-  const allWorlds = useWorlds();
+  const { communities: allWorlds = [] } = useWorlds();
 
   const [sortOpen, setSortOpen] = useState(false);
   const [activeSort, setActiveSort] = useState("Trending");

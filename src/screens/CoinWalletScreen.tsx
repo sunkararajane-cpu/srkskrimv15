@@ -39,16 +39,28 @@ export default function CoinWalletScreen() {
   const navigate = useNavigate();
   const [balance, setBalance] = useState(0);
   const [log, setLog] = useState<CoinsLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'history' | 'earn' | 'buy'>('history');
   const [buyToast, setBuyToast] = useState('');
 
-  useEffect(() => {
-    const refresh = async () => {
+  const refresh = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const bal = await getCoins();
       const lg = await getCoinsLog();
       setBalance(bal);
       setLog(lg);
-    };
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load wallet data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     refresh();
     window.addEventListener('skrimchat_coins_updated', refresh);
     return () => window.removeEventListener('skrimchat_coins_updated', refresh);
@@ -118,8 +130,19 @@ export default function CoinWalletScreen() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 pb-8">
-
-        {/* History tab */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-20">
+            <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+            <p className="text-white/60 text-sm">Loading wallet transactions...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-20">
+            <p className="text-red-400 font-medium mb-3">{error}</p>
+            <button onClick={() => refresh()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+          </div>
+        ) : (
+          <>
+            {/* History tab */}
         {activeTab === 'history' && (
           <div className="flex flex-col gap-1.5 h-full">
             {log.length === 0 ? (
@@ -237,6 +260,8 @@ export default function CoinWalletScreen() {
               </p>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 

@@ -184,7 +184,7 @@ function SearchResultsSection({ query, onClose, onSearch }: { query: string, onC
   const [vibeResults, setVibeResults] = useState<any[]>([]);
   const [worldResults, setWorldResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const allWorlds = useWorlds();
+  const { communities: allWorlds = [] } = useWorlds();
   const navigate = useNavigate();
   
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
@@ -1599,7 +1599,7 @@ export default function DiscoverScreen() {
   const [isWiping, setIsWiping] = useState(false);
 
   const navigate = useNavigate();
-  const allWorlds = useWorlds();
+  const { communities: allWorlds = [] } = useWorlds();
   const searchAreaRef = useRef<HTMLDivElement>(null);
   
   // Pull to refresh state

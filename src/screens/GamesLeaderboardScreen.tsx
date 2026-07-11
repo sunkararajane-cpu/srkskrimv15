@@ -34,6 +34,23 @@ export default function GamesLeaderboardScreen() {
     const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
     const [scores, setScores] = useState<Record<string, GameScore[]>>({});
     const [coins, setCoins] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const fetchScores = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            initializeDummyScores();
+            const res = await getAllScores();
+            setScores(res);
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || "Failed to load leaderboard scores");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         const refresh = async () => {
@@ -46,11 +63,6 @@ export default function GamesLeaderboardScreen() {
     }, []);
 
     useEffect(() => {
-        const fetchScores = async () => {
-            initializeDummyScores();
-            const res = await getAllScores();
-            setScores(res);
-        };
         fetchScores();
     }, []);
 
@@ -159,9 +171,20 @@ export default function GamesLeaderboardScreen() {
             </div>
 
             <div className="flex-1 overflow-y-auto pb-24 p-4 no-scrollbar">
-                
-                {/* Podium */}
-                {topThree.length >= 3 && (
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-24 text-center">
+                        <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-amber-400 animate-spin mb-4" />
+                        <p className="text-white/60 text-sm">Querying high score blockchain records...</p>
+                    </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                        <p className="text-red-400 font-medium mb-3">{error}</p>
+                        <button onClick={fetchScores} className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold rounded-full text-xs">Try Again</button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Podium */}
+                        {topThree.length >= 3 && (
                     <div className="flex items-end justify-center gap-3 md:gap-6 mb-12 mt-8">
                         {/* 2nd Place */}
                         <div className="flex flex-col items-center">
@@ -218,6 +241,8 @@ export default function GamesLeaderboardScreen() {
                         </div>
                     )}
                 </div>
+                    </>
+                )}
             </div>
 
             {/* Your Rank Card */}

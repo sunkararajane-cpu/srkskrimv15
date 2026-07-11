@@ -41,7 +41,7 @@ export default function CreatorEarningsScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
   const worldId = id || 'c004';
-  const worlds = useWorlds();
+  const { communities: worlds = [] } = useWorlds();
   const world = worlds.find(c => c.id === worldId) || worlds[0];
 
   const [counter, setCounter] = useState(0);

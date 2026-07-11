@@ -240,18 +240,30 @@ export async function denyJoinRequest(worldId: string, requesterId: string) {
 
 export function useWorlds() {
   const [communities, setCommunities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleUpdate = async () => {
+  const handleUpdate = async () => {
+    setLoading(true);
+    setError(null);
+    try {
       const data = await getCommunities();
       setCommunities(data);
-    };
+      setLoading(false);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load worlds");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     handleUpdate();
     window.addEventListener('worlds_updated', handleUpdate);
     return () => window.removeEventListener('worlds_updated', handleUpdate);
   }, []);
 
-  return communities;
+  return { communities, loading, error, refresh: handleUpdate };
 }
 
 export function useWorldMembership(worldId: string) {

@@ -37,13 +37,14 @@ const PRESET_ATMOSPHERES: Record<string, string[]> = {
 export default function WorldDetailScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const ALL_COMMUNITIES = useWorlds();
-  const world = ALL_COMMUNITIES.find((c) => c.id === id) || ALL_COMMUNITIES[0];
+  const { communities: ALL_COMMUNITIES = [], loading, error, refresh } = useWorlds();
+  const world = ALL_COMMUNITIES.find((c) => c.id === id);
   const { joined, join, leave, deleteWorld, level, daysActive, pending, requestJoin } = useWorldMembership(
-    world.id,
+    world?.id || "",
   );
-  const colors =
-    PRESET_ATMOSPHERES[world.atmosphere] || PRESET_ATMOSPHERES.slate;
+  const colors = world
+    ? (PRESET_ATMOSPHERES[world.atmosphere] || PRESET_ATMOSPHERES.slate)
+    : PRESET_ATMOSPHERES.slate;
 
   const [activeTab, setActiveTab] = useState("world");
   const [bellActive, setBellActive] = useState(false);
@@ -173,6 +174,24 @@ export default function WorldDetailScreen() {
       navigate("/worlds", { replace: true });
     }, 600);
   };
+
+  if (loading || !world) {
+    return (
+      <div className="w-full h-full bg-[#0A0A12] flex flex-col items-center justify-center py-20 text-center px-8">
+        <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+        <p className="text-white/60 text-sm">Loading world details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-full bg-[#0A0A12] flex flex-col items-center justify-center py-20 text-center px-8">
+        <p className="text-red-400 font-medium mb-3">{error}</p>
+        <button onClick={() => refresh()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+      </div>
+    );
+  }
 
   if (isPortalAnimating) {
     return (

@@ -8,7 +8,7 @@ import { useWorlds } from '../hooks/useWorldMembership';
 
 export default function MonetizationHubScreen() {
   const navigate = useNavigate();
-  const worlds = useWorlds();
+  const { communities: worlds = [], loading, error, refresh } = useWorlds();
   const paidWorlds = worlds.filter((w) => (w as any).paid);
   const [worldPicker, setWorldPicker] = useState(false);
   const [worldsToast, setWorldsToast] = useState(false);
@@ -63,7 +63,19 @@ export default function MonetizationHubScreen() {
       </header>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-24 flex flex-col gap-6">
-        {/* Your earnings */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#D4AF37] animate-spin mb-4" />
+            <p className="text-white/60 text-sm">Loading monetization parameters...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <p className="text-red-400 font-medium mb-3">{error}</p>
+            <button onClick={() => refresh()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+          </div>
+        ) : (
+          <>
+            {/* Your earnings */}
         <div className="bg-gradient-to-br from-[#1A1A24] to-[#111] rounded-2xl border border-[#D4AF37]/20 p-5">
           <p className="text-[11px] text-gray-500 mb-1">Your earnings this period</p>
           <h2 className="text-3xl font-black bg-gradient-to-r from-[#D4AF37] to-[#F3E5AB] bg-clip-text text-transparent mb-2">
@@ -126,6 +138,8 @@ export default function MonetizationHubScreen() {
               Turn on Tips →
             </button>
           </div>
+        )}
+          </>
         )}
       </div>
 

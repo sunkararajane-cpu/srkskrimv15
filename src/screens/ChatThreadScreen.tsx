@@ -20,6 +20,8 @@ import { CHAT_MOODS } from '../constants/moods';
 import { CHAT_THEMES } from '../constants/themes';
 import { useChatEnergy } from '../hooks/useChatEnergy';
 import { getChatById } from '../lib/mock/mockChatDirectory';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useAuthStore } from '../store/authStore';
 import { buildChallengeGameUrl } from '../lib/challengeFlow';
 import { SuggestedReplies } from '../components/SuggestedReplies';
 import { getSmartReplies } from '../lib/smartRepliesEngine';
@@ -128,6 +130,84 @@ export default function ChatThreadScreen() {
     return MOCK_MESSAGES;
   });
   const [showGamePicker, setShowGamePicker] = useState(false);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [wsLoading, setWsLoading] = useState(true);
+  const [wsError, setWsError] = useState<string | null>(null);
+
+  const currentUser = useCurrentUser();
+
+  useEffect(() => {
+    if (!chatId) return;
+
+    setWsLoading(true);
+    setWsError(null);
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    let ws: WebSocket;
+
+    try {
+      ws = new WebSocket(wsUrl);
+      setSocket(ws);
+    } catch (err: any) {
+      console.error("Failed to construct WebSocket:", err);
+      setWsError("Failed to establish real-time connection");
+      setWsLoading(false);
+      return;
+    }
+
+    ws.onopen = () => {
+      console.log("[WebSocket] Connected to signaling at", wsUrl);
+      const token = useAuthStore.getState().idToken || "dummy";
+      ws.send(JSON.stringify({
+        type: "join",
+        roomId: chatId,
+        userId: currentUser?.id || currentUser?.username || "me",
+        token: token
+      }));
+      setWsLoading(false);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === "live-chat-message") {
+          const remoteUserId = data.userId;
+          if (remoteUserId !== (currentUser?.id || currentUser?.username || "me")) {
+            const reply: Message = {
+              id: Date.now().toString() + "_" + Math.floor(Math.random() * 1000000),
+              sender: 'them',
+              type: 'text',
+              text: data.text,
+              mood: otherMood,
+              createdAt: new Date(data.timestamp).getTime(),
+              time: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            setMessages(prev => [...prev, reply]);
+          }
+        } else if (data.type === "error") {
+          console.error("[WebSocket] error payload:", data.message);
+          setWsError(data.message);
+        }
+      } catch (err) {
+        console.error("Failed to parse websocket message:", err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("[WebSocket] connection error:", err);
+      setWsError("Real-time connection error");
+      setWsLoading(false);
+    };
+
+    ws.onclose = () => {
+      console.log("[WebSocket] Closed connection for room", chatId);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [chatId, currentUser?.id, currentUser?.username]);
   
   const [themeId, setThemeId] = useState<string>(() => {
      const stored = localStorage.getItem(`chat_theme_${chatId || 'default'}`);
@@ -352,6 +432,13 @@ export default function ChatThreadScreen() {
     setSuggestedReplies([]);
     triggerBondUpdate();
     executeSendRipple();
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: "live-chat-message",
+        text
+      }));
+    }
 
     // Detect URL and fetch link preview
     const url = extractFirstUrl(text);
@@ -857,6 +944,24 @@ export default function ChatThreadScreen() {
              </div>
           </motion.div>
         </AnimatePresence>
+      )}
+
+      {wsLoading && (
+        <div className="absolute top-[60px] inset-x-0 z-40 px-4 pt-2">
+           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-3 flex justify-center items-center gap-2 shadow-lg">
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent border-[#B026FF] animate-spin" />
+              <span className="text-white/60 font-medium text-xs font-mono">ESTABLISHING REAL-TIME CONNECTION...</span>
+           </div>
+        </div>
+      )}
+
+      {wsError && (
+        <div className="absolute top-[60px] inset-x-0 z-40 px-4 pt-2">
+           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex justify-between items-center shadow-lg">
+              <span className="text-red-400 font-medium text-xs">{wsError}</span>
+              <button onClick={() => window.location.reload()} className="text-[10px] bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-white font-bold">RETRY</button>
+           </div>
+        </div>
       )}
 
       {bond?.atRisk && (

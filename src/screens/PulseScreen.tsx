@@ -3075,6 +3075,7 @@ export default function PulseScreen() {
   const [showDraftsSheet, setShowDraftsSheet] = useState(false);
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [newPostsCount, setNewPostsCount] = useState(0);
@@ -3350,90 +3351,101 @@ export default function PulseScreen() {
   const loadPage = useCallback((page: number, append: boolean, mood: string, tab: 'foryou' | 'following') => {
     if (isLoadingMore && append) return;
     if (append) setIsLoadingMore(true);
+    if (!append) {
+      setLoading(true);
+      setError(null);
+    }
 
     setTimeout(async () => {
-      const newPosts = await assembleFeed(mood, page * 10, 10, [], tab);
-      let savedList: string[] = [];
-      let likedList: string[] = [];
-      let likeCounts: Record<string,number> = {};
-      let commentCounts: Record<string,number> = {};
-      let shareCounts: Record<string,number> = {};
-      let myReactions: Record<string,string> = {};
-      let reactionCounts: Record<string, Record<string,number>> = {};
-
       try {
-        savedList = JSON.parse(localStorage.getItem('skrimchat_saved_posts') || '[]');
-        likedList = JSON.parse(localStorage.getItem('skrimchat_liked_posts') || '[]');
-        likeCounts = JSON.parse(localStorage.getItem('skrimchat_like_counts') || '{}');
-        commentCounts = JSON.parse(localStorage.getItem('skrimchat_comment_counts') || '{}');
-        shareCounts = JSON.parse(localStorage.getItem('skrimchat_share_counts') || '{}');
-        myReactions = JSON.parse(localStorage.getItem('skrimchat_my_reactions') || '{}');
-        reactionCounts = JSON.parse(localStorage.getItem('skrimchat_post_reactions') || '{}');
-      } catch (e) {
-        console.error("Failed to parse some local storage items in loadPage:", e);
-      }
-      const synced = newPosts.map(p => ({
-        ...p,
-        isSaved: savedList.includes(p.id),
-        isLiked: likedList.includes(p.id),
-        likes: likeCounts[p.id] ?? p.likes,
-        comments: getPostCommentCount(p.id, p.comments),
-        shares: shareCounts[p.id] ?? p.shares,
-        reactions: reactionCounts[p.id] ?? p.reactions,
-        myReactionId: myReactions[p.id] || null,
-      }));
+        const newPosts = await assembleFeed(mood, page * 10, 10, [], tab);
+        let savedList: string[] = [];
+        let likedList: string[] = [];
+        let likeCounts: Record<string,number> = {};
+        let commentCounts: Record<string,number> = {};
+        let shareCounts: Record<string,number> = {};
+        let myReactions: Record<string,string> = {};
+        let reactionCounts: Record<string, Record<string,number>> = {};
 
-      const muted = await getMutedUsers();
-      const blocked = await getBlockedUsers();
+        try {
+          savedList = JSON.parse(localStorage.getItem('skrimchat_saved_posts') || '[]');
+          likedList = JSON.parse(localStorage.getItem('skrimchat_liked_posts') || '[]');
+          likeCounts = JSON.parse(localStorage.getItem('skrimchat_like_counts') || '{}');
+          commentCounts = JSON.parse(localStorage.getItem('skrimchat_comment_counts') || '{}');
+          shareCounts = JSON.parse(localStorage.getItem('skrimchat_share_counts') || '{}');
+          myReactions = JSON.parse(localStorage.getItem('skrimchat_my_reactions') || '{}');
+          reactionCounts = JSON.parse(localStorage.getItem('skrimchat_post_reactions') || '{}');
+        } catch (e) {
+          console.error("Failed to parse some local storage items in loadPage:", e);
+        }
+        const synced = newPosts.map(p => ({
+          ...p,
+          isSaved: savedList.includes(p.id),
+          isLiked: likedList.includes(p.id),
+          likes: likeCounts[p.id] ?? p.likes,
+          comments: getPostCommentCount(p.id, p.comments),
+          shares: shareCounts[p.id] ?? p.shares,
+          reactions: reactionCounts[p.id] ?? p.reactions,
+          myReactionId: myReactions[p.id] || null,
+        }));
 
-      if (append) {
-        setPosts(prev => {
+        const muted = await getMutedUsers();
+        const blocked = await getBlockedUsers();
+
+        if (append) {
+          setPosts(prev => {
+            let deletedIds: string[] = [];
+            try {
+              deletedIds = JSON.parse(localStorage.getItem('skrimchat_deleted_post_ids') || '[]');
+            } catch (e) {}
+
+            const filterPost = (p: any) => {
+              if (p && p.id && deletedIds.includes(p.id)) return false;
+              const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
+              return !muted.includes(handle) && !blocked.includes(handle);
+            };
+
+            const ids = new Set(prev.map(p => p.id));
+            const fresh = synced.filter(p => !ids.has(p.id)).filter(filterPost);
+            return [...prev, ...fresh];
+          });
+          setIsLoadingMore(false);
+        } else {
+          // Reposts live outside the algorithmic feed (they're user actions, not
+          // generated content) so they're stored separately and stitched onto the
+          // front of page 0 — same idea as a real timeline, where your own
+          // reposts always surface above the ranked feed.
+          let reposts: any[] = [];
+          let customPosts: any[] = [];
+          try {
+            reposts = JSON.parse(localStorage.getItem('skrimchat_reposts') || '[]');
+            customPosts = await getAllRecords('pulses');
+          } catch (e) {}
+          
           let deletedIds: string[] = [];
           try {
             deletedIds = JSON.parse(localStorage.getItem('skrimchat_deleted_post_ids') || '[]');
           } catch (e) {}
 
+          // Filter out posts from muted or blocked users as well as deleted ones
           const filterPost = (p: any) => {
             if (p && p.id && deletedIds.includes(p.id)) return false;
             const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
             return !muted.includes(handle) && !blocked.includes(handle);
           };
-
-          const ids = new Set(prev.map(p => p.id));
-          const fresh = synced.filter(p => !ids.has(p.id)).filter(filterPost);
-          return [...prev, ...fresh];
-        });
-        setIsLoadingMore(false);
-      } else {
-        // Reposts live outside the algorithmic feed (they're user actions, not
-        // generated content) so they're stored separately and stitched onto the
-        // front of page 0 — same idea as a real timeline, where your own
-        // reposts always surface above the ranked feed.
-        let reposts: any[] = [];
-        let customPosts: any[] = [];
-        try {
-          reposts = JSON.parse(localStorage.getItem('skrimchat_reposts') || '[]');
-          customPosts = await getAllRecords('pulses');
-        } catch (e) {}
-        
-        let deletedIds: string[] = [];
-        try {
-          deletedIds = JSON.parse(localStorage.getItem('skrimchat_deleted_post_ids') || '[]');
-        } catch (e) {}
-
-        // Filter out posts from muted or blocked users as well as deleted ones
-        const filterPost = (p: any) => {
-          if (p && p.id && deletedIds.includes(p.id)) return false;
-          const handle = (p.handle || p.user?.username || p.userName || '').replace('@', '');
-          return !muted.includes(handle) && !blocked.includes(handle);
-        };
-        const filteredSynced = synced.filter(filterPost);
-        const filteredReposts = reposts.filter(filterPost);
-        const filteredCustomPosts = customPosts.filter(filterPost);
-        const combined = page === 0 ? [...filteredCustomPosts, ...filteredReposts, ...filteredSynced] : filteredSynced;
-        combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setPosts(combined);
+          const filteredSynced = synced.filter(filterPost);
+          const filteredReposts = reposts.filter(filterPost);
+          const filteredCustomPosts = customPosts.filter(filterPost);
+          const combined = page === 0 ? [...filteredCustomPosts, ...filteredReposts, ...filteredSynced] : filteredSynced;
+          combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setPosts(combined);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Error loading pulse page:", err);
+        setError(err.message || "Failed to load pulses");
         setLoading(false);
+        setIsLoadingMore(false);
       }
     }, append ? 100 : 150);
   }, [isLoadingMore]);
@@ -3963,7 +3975,14 @@ export default function PulseScreen() {
 
       {/* ── FEED ─────────────────────────────────────── */}
       <div className="flex flex-col pt-4">
-        {loading ? (
+        {error ? (
+          <div className="px-4 py-8 flex flex-col items-center justify-center text-center gap-3">
+            <p className="text-red-400 font-medium text-sm">{error}</p>
+            <button onClick={() => loadPage(0, false, selectedMood, activeTab)} className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold transition-all">
+              Try Again
+            </button>
+          </div>
+        ) : loading ? (
           Array.from({ length: 4 }).map((_, i) => <PostSkeleton key={`feed-loading-skeleton-${i}`} />)
         ) : (() => {
           const isBackgroundMuted = activeUserIndex !== null || isSparkCreatorOpen || !!storyBehindPostId || !!fullscreenMedia;

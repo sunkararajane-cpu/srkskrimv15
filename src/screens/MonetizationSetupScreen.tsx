@@ -28,7 +28,7 @@ const OPTIONAL_PERKS = [
 export default function MonetizationSetupScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const worlds = useWorlds();
+  const { communities: worlds = [] } = useWorlds();
   const world = worlds.find(w => w.id === id);
 
   const [step, setStep] = useState(0); // 0 = Entry, 1..4 = Wizard

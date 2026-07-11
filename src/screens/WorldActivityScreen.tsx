@@ -30,7 +30,7 @@ export function WorldActivityScreen() {
     addSignal,
     clearUnseen,
   } = useWorldSignalStore();
-  const worlds = useWorlds();
+  const { communities: worlds = [] } = useWorlds();
 
   const [activeTab, setActiveTab] = useState<string>("All");
   const [showMenu, setShowMenu] = useState(false);

@@ -337,9 +337,24 @@ function MainAppLayout() {
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, checkSession, isLoading } = useAuthStore();
   const retentionOnboarded = useRetentionStore((s) => s.onboarded);
   useRetentionSweep(isAuthenticated && retentionOnboarded);
+
+  React.useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent border-[#B026FF] animate-spin" />
+          <span className="text-sm text-gray-400 font-mono tracking-wider">BOOTSTRAPPING SESSION...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>

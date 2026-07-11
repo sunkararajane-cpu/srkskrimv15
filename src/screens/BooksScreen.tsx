@@ -27,6 +27,7 @@ import {
 import { useCurrentUser } from "../hooks/useCurrentUser";
 import {
   getStoredBooks,
+  getStoredBooksAsync,
   addBook,
   addBookWithBlob,
   getPDFBlob,
@@ -122,9 +123,22 @@ export default function BooksScreen() {
     return () => cancelAnimationFrame(raf);
   }, [readerPage, activeBook]);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Load books
-  const loadBooks = () => {
-    setBooks(getStoredBooks());
+  const loadBooks = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const fetched = await getStoredBooksAsync();
+      setBooks(fetched);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load publications");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Load bookmarks for the active book
@@ -138,7 +152,7 @@ export default function BooksScreen() {
 
   useEffect(() => {
     loadBooks();
-    const handleUpdate = () => loadBooks();
+    const handleUpdate = () => { loadBooks(); };
     window.addEventListener("skrimchat_books_updated", handleUpdate);
     return () => window.removeEventListener("skrimchat_books_updated", handleUpdate);
   }, []);
@@ -511,7 +525,17 @@ export default function BooksScreen() {
             </span>
           </div>
 
-          {filteredBooks.length === 0 ? (
+          {loading ? (
+            <div className="bg-[#0A0A0F] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+              <p className="text-sm font-bold text-gray-300">Loading library publications...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-[#0A0A0F] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
+              <p className="text-red-400 font-medium mb-3">{error}</p>
+              <button onClick={() => loadBooks()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+            </div>
+          ) : filteredBooks.length === 0 ? (
             <div className="bg-[#0A0A0F] border border-white/5 rounded-2xl p-12 text-center flex flex-col items-center justify-center">
               <Book className="w-12 h-12 text-gray-600 mb-3" />
               <p className="text-sm font-bold text-gray-300">No publications found</p>
@@ -743,16 +767,11 @@ export default function BooksScreen() {
                     {pdfBlobUrl && (
                       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2 bg-[#0A0A0F]/90 border border-white/10 px-5 py-4 rounded-2xl backdrop-blur-md shadow-2xl text-center max-w-sm">
                         <p className="text-[11px] text-gray-400 font-medium leading-normal">
-                          Iframe sandbox security may restrict inline PDF plug-ins on some browsers.
+                          Secure CloudFront content delivery has been optimized for this browser canvas. Direct downloading is strictly disabled.
                         </p>
-                        <a
-                          href={pdfBlobUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-gradient-to-r from-[#B026FF] to-[#00F0FF] rounded-xl text-white font-bold text-xs flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md"
-                        >
-                          <BookOpen className="w-3.5 h-3.5" /> Launch High-Fidelity Tab Reader
-                        </a>
+                        <div className="flex items-center gap-1.5 text-[#00F0FF] text-xs font-bold font-mono">
+                          <Lock className="w-3.5 h-3.5 animate-pulse" /> DOWNLOAD PROTECTED BY DRM
+                        </div>
                       </div>
                     )}
                   </div>

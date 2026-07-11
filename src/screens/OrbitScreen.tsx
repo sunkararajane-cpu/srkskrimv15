@@ -21,6 +21,8 @@ export default function OrbitScreen() {
     dailyLimit,
     locationStatus,
     requestLocation,
+    isLoading,
+    error,
   } = useOrbit();
 
   const [icebreakerUser, setIcebreakerUser] = useState<OrbitUser | null>(null);
@@ -136,7 +138,19 @@ export default function OrbitScreen() {
       )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-        {/* Radius / count bar */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#00F0FF] animate-spin mb-4" />
+            <p className="text-white/60 text-sm">Synchronizing orbital coordinate grid...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <p className="text-red-400 font-medium mb-3">{error}</p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+          </div>
+        ) : (
+          <>
+            {/* Radius / count bar */}
         <div className="px-4 py-3 flex items-center justify-between">
           <p className="text-xs text-white/50">
             <span className="text-white font-bold">{visibleUsers.length}</span> people within{' '}
@@ -245,6 +259,8 @@ export default function OrbitScreen() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
 
       <IcebreakerSheet

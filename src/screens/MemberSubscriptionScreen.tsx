@@ -24,7 +24,7 @@ export default function MemberSubscriptionScreen() {
   const { joined } = useWorldMembership(worldId);
   
   // Use MOCK_COMMUNITIES to find world
-  const worlds = useWorlds();
+  const { communities: worlds = [] } = useWorlds();
   const world = worlds.find(c => c.id === worldId) || worlds[0];
 
   const [isCancelled, setIsCancelled] = useState(SUBSCRIPTION_DATA.status === 'cancelled');

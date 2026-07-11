@@ -177,47 +177,55 @@ export default function ConnectScreen() {
   
   const [chats, setChats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all'|'requests'>('all');
   const [requests, setRequests] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchChats = async () => {
       setLoading(true);
-      let fetchedChats: any[] = [];
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        fetchedChats = await getChats();
-      }
-      
-      // Merge with custom chats
-      const storedChatsStr = localStorage.getItem('skrimchat_custom_chats');
-      const customChats = storedChatsStr ? JSON.parse(storedChatsStr) : {};
-      
-      const customChatEntries = Object.keys(customChats).map(key => {
-         const msgs = customChats[key];
-         const lastMsg = msgs[msgs.length - 1];
-         const matchedUser = mockUsers.find(u => u.username?.replace('@', '') === key);
-         const previewText =
-           lastMsg.type === 'spark_share'
-             ? (lastMsg.isRepost ? '🔄⚡ Reposted a Spark' : '⚡ Sent you a Spark')
-             : (lastMsg.text || lastMsg.caption || 'Sent a message');
-         return {
-            id: `custom_${key}`,
-            name: matchedUser?.displayName || key,
-            username: key,
-            avatar: matchedUser?.avatar || `https://i.pravatar.cc/150?u=${key}`,
-            msg: previewText,
-            time: 'Just now',
-            unread: 0,
-            isVeil: false
-         };
-      });
+      setError(null);
+      try {
+        let fetchedChats: any[] = [];
+        if (FEATURE_FLAGS.MOCK_MODE) {
+          fetchedChats = await getChats();
+        }
+        
+        // Merge with custom chats
+        const storedChatsStr = localStorage.getItem('skrimchat_custom_chats');
+        const customChats = storedChatsStr ? JSON.parse(storedChatsStr) : {};
+        
+        const customChatEntries = Object.keys(customChats).map(key => {
+           const msgs = customChats[key];
+           const lastMsg = msgs[msgs.length - 1];
+           const matchedUser = mockUsers.find(u => u.username?.replace('@', '') === key);
+           const previewText =
+             lastMsg.type === 'spark_share'
+               ? (lastMsg.isRepost ? '🔄⚡ Reposted a Spark' : '⚡ Sent you a Spark')
+               : (lastMsg.text || lastMsg.caption || 'Sent a message');
+           return {
+              id: `custom_${key}`,
+              name: matchedUser?.displayName || key,
+              username: key,
+              avatar: matchedUser?.avatar || `https://i.pravatar.cc/150?u=${key}`,
+              msg: previewText,
+              time: 'Just now',
+              unread: 0,
+              isVeil: false
+           };
+        });
 
-      // Filter out duplicates if any
-      const finalChats = [...customChatEntries, ...fetchedChats.filter(fc => !customChatEntries.find(cc => cc.name.replace('@', '') === fc.name.replace('@', '')))];
-      
-      setChats(finalChats);
-      setLoading(false);
-    }
+        // Filter out duplicates if any
+        const finalChats = [...customChatEntries, ...fetchedChats.filter(fc => !customChatEntries.find(cc => cc.name.replace('@', '') === fc.name.replace('@', '')))];
+        
+        setChats(finalChats);
+        setLoading(false);
+      } catch (err: any) {
+        console.error("Failed to fetch chats:", err);
+        setError(err.message || "Failed to load chats");
+        setLoading(false);
+      }
+    };
     fetchChats();
     window.addEventListener('skrimchat_custom_chats_updated', fetchChats);
     return () => window.removeEventListener('skrimchat_custom_chats_updated', fetchChats);
@@ -835,7 +843,17 @@ export default function ConnectScreen() {
           </div>
 
           {/* Chat List */}
-          {filteredChats.length === 0 ? (
+          {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+                 <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+                 <p className="text-white/60 text-sm">Loading chats...</p>
+              </div>
+          ) : error ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+                 <p className="text-red-400 font-medium mb-3">{error}</p>
+                 <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+              </div>
+          ) : filteredChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center px-8 opacity-60">
                  <MessageCircle className="w-12 h-12 text-gray-500 mb-4" />
                  <p className="text-white font-medium mb-1">No conversations found</p>

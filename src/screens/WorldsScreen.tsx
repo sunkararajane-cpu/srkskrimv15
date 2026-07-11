@@ -36,7 +36,7 @@ export default function WorldsScreen() {
     }
   });
 
-  const ALL_COMMUNITIES = useWorlds();
+  const { communities: ALL_COMMUNITIES = [], loading, error, refresh } = useWorlds();
   const unreadNotifCount = useWorldSignalStore(
     (s) => s.signals.filter((n) => !n.read).length
   );
@@ -289,7 +289,19 @@ export default function WorldsScreen() {
       </header>
 
       <main className="flex-1 flex flex-col gap-8 pb-10 relative z-10 mt-6">
-        {/* MY WORLDS */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+            <p className="text-white/60 text-sm">Loading worlds...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <p className="text-red-400 font-medium mb-3">{error}</p>
+            <button onClick={() => refresh()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Try Again</button>
+          </div>
+        ) : (
+          <>
+            {/* MY WORLDS */}
         <AnimatePresence>
           {myWorlds.length > 0 ? (
             <motion.section
@@ -410,6 +422,8 @@ export default function WorldsScreen() {
             ))}
           </div>
         </section>
+          </>
+        )}
       </main>
 
       <AnimatePresence>

@@ -15,6 +15,7 @@ export interface Book {
   sizeBytes: number;
   uploadedAt: number;
   dataUrl?: string; // For uploaded PDF base64 / blob URLs
+  pdfUrl?: string;  // CloudFront PDF URLs
   description?: string;
   coverColor: string; // Tailwind gradient/solid bg class
   content?: string[]; // Array of pages/chapters for built-in text reading
@@ -28,6 +29,7 @@ const DEFAULT_BOOKS: Book[] = [
     title: "The Art of War",
     author: "Sun Tzu",
     fileName: "the_art_of_war.pdf",
+    pdfUrl: "https://d1skrimchatlib.cloudfront.net/books/the_art_of_war.pdf",
     sizeBytes: 45200,
     uploadedAt: 1782136400000,
     description: "An ancient Chinese military treatise dating from the Late Spring and Autumn Period. The work, which is attributed to the ancient Chinese military strategist Sun Tzu, is composed of 13 chapters.",
@@ -45,6 +47,7 @@ const DEFAULT_BOOKS: Book[] = [
     title: "A Scandal in Bohemia",
     author: "Arthur Conan Doyle",
     fileName: "scandal_in_bohemia.pdf",
+    pdfUrl: "https://d1skrimchatlib.cloudfront.net/books/scandal_in_bohemia.pdf",
     sizeBytes: 124000,
     uploadedAt: 1782136400000,
     description: "The first of Arthur Conan Doyle's Sherlock Holmes short stories, featuring the famous detective's duel of wits with Irene Adler, the woman who outsmarted him.",
@@ -61,6 +64,7 @@ const DEFAULT_BOOKS: Book[] = [
     title: "The Great Gatsby",
     author: "F. Scott Fitzgerald",
     fileName: "the_gatsby.pdf",
+    pdfUrl: "https://d1skrimchatlib.cloudfront.net/books/the_gatsby.pdf",
     sizeBytes: 154000,
     uploadedAt: 1782136400000,
     description: "The classic 1925 novel following a cast of characters living in the fictional towns of West Egg and East Egg on prosperous Long Island in the summer of 1922.",

@@ -119,14 +119,17 @@ export function useOrbit() {
 
   const [users, setUsers] = useState<OrbitUser[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const u = await getOrbitUsersAsync();
       setUsers(u || []);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to fetch orbit users", e);
+      setError(e.message || "Failed to load Orbit network");
     } finally {
       setIsLoading(false);
     }
@@ -281,5 +284,6 @@ export function useOrbit() {
     locationStatus,
     requestLocation,
     isLoading,
+    error,
   };
 }

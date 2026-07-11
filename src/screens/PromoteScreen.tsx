@@ -28,6 +28,23 @@ export default function PromoteScreen() {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [launchedCampaignId, setLaunchedCampaignId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (err: any) {
+        setError(err.message || "Failed to initialize advertising workspace");
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, []);
 
   // Arrive pre-filled from "Boost this content" or "Edit & Resubmit"
   useEffect(() => {
@@ -137,7 +154,19 @@ export default function PromoteScreen() {
       </header>
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
-        {view === 'home' && (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <div className="w-8 h-8 rounded-full border-4 border-t-transparent border-[#B026FF] animate-spin mb-4" />
+            <p className="text-white/60 text-sm">Loading advertising workspace...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-8">
+            <p className="text-red-400 font-medium mb-3">{error}</p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-full text-xs">Retry</button>
+          </div>
+        ) : (
+          <>
+            {view === 'home' && (
           <PromoteHome
             onCreateAd={() => { setDraft(AD_DRAFT_DEFAULTS); setStep(0); setView('create'); }}
             onViewCampaignDashboard={() => setView('campaigns')}
@@ -187,6 +216,8 @@ export default function PromoteScreen() {
               )}
             </AnimatePresence>
           </div>
+        )}
+          </>
         )}
       </div>
 
