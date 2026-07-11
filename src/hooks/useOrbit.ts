@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { mockNearbyUsers, NearbyUser, MoodStatus, IcebreakerType } from '../lib/mock/mockNearby';
+import { mockOrbitUsers, OrbitUser, MoodStatus, IcebreakerType } from '../lib/mock/mockOrbit';
 import { haversineDistanceKm, destinationPoint } from '../lib/geo';
 
 export type RadiusKm = 1 | 5 | 10 | 25 | 50;
@@ -51,36 +51,36 @@ function todayKey() {
 }
 
 function getRequests(): PendingRequest[] {
-  return safeParse<PendingRequest[]>(safeGet('nearby_requests'), []);
+  return safeParse<PendingRequest[]>(safeGet('orbit_requests'), []);
 }
 
 function setRequests(reqs: PendingRequest[]) {
-  safeSet('nearby_requests', JSON.stringify(reqs));
-  window.dispatchEvent(new Event('nearby_updated'));
+  safeSet('orbit_requests', JSON.stringify(reqs));
+  window.dispatchEvent(new Event('orbit_updated'));
 }
 
 function getAccepted(): string[] {
-  return safeParse<string[]>(safeGet('nearby_accepted'), []);
+  return safeParse<string[]>(safeGet('orbit_accepted'), []);
 }
 
 function setAccepted(ids: string[]) {
-  safeSet('nearby_accepted', JSON.stringify(ids));
-  window.dispatchEvent(new Event('nearby_updated'));
+  safeSet('orbit_accepted', JSON.stringify(ids));
+  window.dispatchEvent(new Event('orbit_updated'));
 }
 
 function getDailyCount(): number {
-  const key = safeGet('nearby_request_count_date');
-  const count = parseInt(safeGet('nearby_request_count') || '0', 10);
+  const key = safeGet('orbit_request_count_date');
+  const count = parseInt(safeGet('orbit_request_count') || '0', 10);
   if (key !== todayKey()) return 0;
   return isNaN(count) ? 0 : count;
 }
 
 function incrementDailyCount() {
-  safeSet('nearby_request_count_date', todayKey());
-  safeSet('nearby_request_count', String(getDailyCount() + 1));
+  safeSet('orbit_request_count_date', todayKey());
+  safeSet('orbit_request_count', String(getDailyCount() + 1));
 }
 
-export interface NearbySettings {
+export interface OrbitSettings {
   radiusKm: RadiusKm;
   presence: PresenceDuration;
   mood: MoodStatus;
@@ -89,7 +89,7 @@ export interface NearbySettings {
   isVerified: boolean;
 }
 
-const DEFAULT_SETTINGS: NearbySettings = {
+const DEFAULT_SETTINGS: OrbitSettings = {
   radiusKm: 10,
   presence: '1h',
   mood: 'want_to_chat',
@@ -98,18 +98,18 @@ const DEFAULT_SETTINGS: NearbySettings = {
   isVerified: false,
 };
 
-function getSettings(): NearbySettings {
-  return safeParse<NearbySettings>(safeGet('nearby_settings'), DEFAULT_SETTINGS);
+function getSettings(): OrbitSettings {
+  return safeParse<OrbitSettings>(safeGet('orbit_settings'), DEFAULT_SETTINGS);
 }
 
-function setSettingsStorage(s: NearbySettings) {
-  safeSet('nearby_settings', JSON.stringify(s));
-  window.dispatchEvent(new Event('nearby_updated'));
+function setSettingsStorage(s: OrbitSettings) {
+  safeSet('orbit_settings', JSON.stringify(s));
+  window.dispatchEvent(new Event('orbit_updated'));
 }
 
-/** Main hook: nearby user list, filtered by current settings, plus request/accept actions. */
-export function useNearby() {
-  const [settings, setSettingsState] = useState<NearbySettings>(() => getSettings());
+/** Main hook: orbit user list, filtered by current settings, plus request/accept actions. */
+export function useOrbit() {
+  const [settings, setSettingsState] = useState<OrbitSettings>(() => getSettings());
   const [requests, setRequestsState] = useState<PendingRequest[]>(() => getRequests());
   const [accepted, setAcceptedState] = useState<string[]>(() => getAccepted());
   const [dailyCount, setDailyCount] = useState<number>(() => getDailyCount());
@@ -149,11 +149,11 @@ export function useNearby() {
       setAcceptedState(getAccepted());
       setDailyCount(getDailyCount());
     };
-    window.addEventListener('nearby_updated', handle);
-    return () => window.removeEventListener('nearby_updated', handle);
+    window.addEventListener('orbit_updated', handle);
+    return () => window.removeEventListener('orbit_updated', handle);
   }, []);
 
-  const updateSettings = useCallback((patch: Partial<NearbySettings>) => {
+  const updateSettings = useCallback((patch: Partial<OrbitSettings>) => {
     const next = { ...getSettings(), ...patch };
     setSettingsStorage(next);
   }, []);
@@ -164,7 +164,7 @@ export function useNearby() {
   // real device position + their stored bearing/distance). Without location
   // permission, we fall back to the static mock distanceKm so the screen
   // still works.
-  const usersWithDistance = mockNearbyUsers.map((u) => {
+  const usersWithDistance = mockOrbitUsers.map((u) => {
     if (coords) {
       const userPoint = destinationPoint(coords.lat, coords.lon, u.bearingDeg, u.distanceKm);
       const liveDistanceKm = haversineDistanceKm(coords.lat, coords.lon, userPoint.lat, userPoint.lon);
@@ -173,7 +173,7 @@ export function useNearby() {
     return u;
   });
 
-  const visibleUsers: NearbyUser[] = usersWithDistance.filter((u) => {
+  const visibleUsers: OrbitUser[] = usersWithDistance.filter((u) => {
     if (u.distanceKm > settings.radiusKm) return false;
     if (settings.ageFilter !== 'all') {
       const [min, max] = settings.ageFilter.split('-').map(Number);

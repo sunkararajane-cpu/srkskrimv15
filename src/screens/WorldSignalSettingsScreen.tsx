@@ -4,7 +4,7 @@ import { ChevronLeft, Bell } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWorlds } from "../hooks/useWorldMembership";
 
-export function WorldNotificationSettingsScreen() {
+export function WorldSignalSettingsScreen() {
   const { id } = useParams();
   const navigate = useNavigate();
   const worlds = useWorlds();
@@ -72,7 +72,7 @@ export function WorldNotificationSettingsScreen() {
         </button>
         <div className="text-center">
           <h1 className="text-[12px] font-bold tracking-widest uppercase text-white/90 truncate max-w-[200px]">
-            {world.name} NOTIFICATIONS
+            {world.name} SIGNALS
           </h1>
         </div>
         <div className="w-10" />
@@ -91,7 +91,7 @@ export function WorldNotificationSettingsScreen() {
               </div>
               <div>
                 <h3 className="text-[15px] font-bold text-white">
-                  All notifications
+                  All signals
                 </h3>
                 <p className="text-[12px] text-[#888899]">
                   Master switch for {world.name}

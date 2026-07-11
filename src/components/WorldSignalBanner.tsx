@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useWorldNotificationStore } from "../store/worldNotificationStore";
+import { useWorldSignalStore } from "../store/worldSignalStore";
 import { useNavigate } from "react-router-dom";
 import { Flame, Megaphone, Zap, Trophy, Diamond } from "lucide-react";
 
-export function WorldNotificationBanner() {
-  const { activeBanner, clearBanner } = useWorldNotificationStore();
+export function WorldSignalBanner() {
+  const { activeBanner, clearBanner } = useWorldSignalStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export function WorldNotificationBanner() {
 
   if (!activeBanner) return null;
 
-  const n = activeBanner.notification;
+  const n = activeBanner.signal;
 
   const getAtmColor = (atm: string) => {
     switch (atm) {

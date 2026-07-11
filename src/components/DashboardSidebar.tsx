@@ -62,7 +62,7 @@ export function DashboardSidebar() {
   const navigate = useNavigate();
   const isCurrentUserOnline = useIsOnline(currentUser?.username);
 
-  // Live Signal (notification) badge count
+  // Live Signal (signal) badge count
   const [signalUnread, setSignalUnread] = useState<number>(() => {
     const stored = localStorage.getItem('skrimchat_signal_unread');
     return stored ? parseInt(stored, 10) : 8; // default 8 until SignalScreen loads
@@ -264,7 +264,7 @@ export function DashboardSidebar() {
          <div className="flex flex-col gap-[4px]">
            <SidebarNavItem icon={Home} label="Pulse" path="/" badge={3} delay={0.05} />
            <SidebarNavItem icon={Compass} label="Discover" path="/discover" delay={0.1} />
-           <SidebarNavItem icon={Orbit} label="Orbit" path="/nearby" chip="NEW" delay={0.12} />
+           <SidebarNavItem icon={Orbit} label="Orbit" path="/orbit" chip="NEW" delay={0.12} />
            <SidebarNavItem icon={PlaySquare} label="Vibes" path="/vibes" chip="🔥 NEW" delay={0.15} />
            <SidebarNavItem icon={MessageCircle} label="Connect" path="/connect" badge={12} delay={0.2} />
            <SidebarNavItem icon={User} label="Identity" path="/identity" delay={0.25} />

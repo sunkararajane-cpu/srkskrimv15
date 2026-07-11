@@ -7,11 +7,11 @@ import { useCloseFriends } from '../lib/mock/mockSocialGraph';
 import { compressImage } from '../lib/services/mediaStorage';
 import { scanMedia } from '../lib/services/contentModeration';
 import { useModerationLogStore } from '../store/moderationLogStore';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
 // Resolves raw @handles typed into a Spark against mockUsers so a mention
-// notification can carry a real display name and avatar. Dedupes by handle
+// signal can carry a real display name and avatar. Dedupes by handle
 // and drops the poster's own handle so self-mentions don't self-notify.
 function resolveSparkMentions(rawHandles: string[], selfUsername?: string) {
   const self = (selfUsername || '').replace('@', '').toLowerCase();
@@ -341,7 +341,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
       Array.from(new Set([...textMentions, ...mediaMentions])),
       currentUser?.username
     ).forEach((m) => {
-      useNotificationStore.getState().addNotification({
+      useSignalStore.getState().addSignal({
         type: 'mention',
         user: m.user,
         avatar: m.avatar,

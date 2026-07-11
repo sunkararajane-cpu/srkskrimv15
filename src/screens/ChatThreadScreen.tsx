@@ -24,7 +24,7 @@ import { buildChallengeGameUrl } from '../lib/challengeFlow';
 import { SuggestedReplies } from '../components/SuggestedReplies';
 import { getSmartReplies } from '../lib/smartRepliesEngine';
 import { useCallStore } from '../store/callStore';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 
 const generateWaveform = (barCount = 40) => {
   return Array.from({ length: barCount }, () => {
@@ -173,7 +173,7 @@ export default function ChatThreadScreen() {
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => setIsMeTyping(false), 2000);
   };
-  const [moodNotification, setMoodNotification] = useState<{name: string, mood: string} | null>(null);
+  const [moodSignal, setMoodSignal] = useState<{name: string, mood: string} | null>(null);
   const [reactionToast, setReactionToast] = useState<{name: string, emoji: string, moodEmoji: string, moodLabel: string} | null>(null);
   const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
 
@@ -299,8 +299,8 @@ export default function ChatThreadScreen() {
         const nextMoodObj = CHAT_MOODS.find(m => m.id === nextMood);
         if (nextMoodObj) {
            setOtherMood(nextMood);
-           setMoodNotification({ name: recipientUser.displayName.split(' ')[0], mood: `${nextMoodObj.emoji} ${nextMoodObj.label}` });
-           setTimeout(() => setMoodNotification(null), 3000);
+           setMoodSignal({ name: recipientUser.displayName.split(' ')[0], mood: `${nextMoodObj.emoji} ${nextMoodObj.label}` });
+           setTimeout(() => setMoodSignal(null), 3000);
         }
       }, 5000);
     }
@@ -388,9 +388,9 @@ export default function ChatThreadScreen() {
           setMessages(prev => prev.map(m => m.id === newMessage.id ? { ...m, status: 'read' } : m));
           // Only surface this in Signal if the person isn't actively looking
           // at the app — they're already reading it live in the thread
-          // otherwise, so a duplicate notification would just be noise.
+          // otherwise, so a duplicate signal would just be noise.
           if (document.hidden) {
-            useNotificationStore.getState().addNotification({
+            useSignalStore.getState().addSignal({
               type: 'message',
               user: recipientUser.displayName,
               avatar: recipientUser.avatar || '',
@@ -823,7 +823,7 @@ export default function ChatThreadScreen() {
         }}
       />
 
-      {moodNotification && (
+      {moodSignal && (
         <AnimatePresence>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -831,7 +831,7 @@ export default function ChatThreadScreen() {
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
             className="absolute top-24 inset-x-0 mx-auto w-max z-40 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-lg"
           >
-             <span className="text-white/90 text-sm font-medium">{moodNotification.name} is feeling {moodNotification.mood}!</span>
+             <span className="text-white/90 text-sm font-medium">{moodSignal.name} is feeling {moodSignal.mood}!</span>
           </motion.div>
         </AnimatePresence>
       )}

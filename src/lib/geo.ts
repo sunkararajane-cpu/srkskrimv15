@@ -1,4 +1,4 @@
-// Real geolocation math helpers for Orbit (Nearby).
+// Real geolocation math helpers for Orbit (Orbit).
 // No mock/random numbers here — standard spherical-earth formulas.
 
 const EARTH_RADIUS_KM = 6371;
@@ -32,7 +32,7 @@ export function haversineDistanceKm(
 
 /**
  * Given a starting point, a bearing (degrees, 0 = north, clockwise), and a
- * distance in km, returns the destination lat/lon. Used to place mock nearby
+ * distance in km, returns the destination lat/lon. Used to place mock orbit
  * users at a genuine, computable point relative to the real device location,
  * instead of a random unrelated distance number.
  */

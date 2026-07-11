@@ -1,4 +1,4 @@
-// Mock data for the Nearby ("Orbit") discovery feature.
+// Mock data for the Orbit ("Orbit") discovery feature.
 // Mirrors the conventions used in mockData.ts / mockSocialGraph.ts —
 // deterministic, seeded-looking data instead of fully random noise.
 
@@ -23,7 +23,7 @@ export const PRESENCE_META: Record<PresenceDuration, { label: string; ms: number
 
 export type ReputationTag = 'friendly' | 'helpful' | 'funny' | 'respectful';
 
-export interface NearbyUser {
+export interface OrbitUser {
   id: string;
   nickname: string;
   avatar: string;
@@ -66,10 +66,10 @@ function pick<T>(arr: T[], n: number, seed: number): T[] {
   return out;
 }
 
-export const mockNearbyUsers: NearbyUser[] = nicknames.map((nickname, i) => {
+export const mockOrbitUsers: OrbitUser[] = nicknames.map((nickname, i) => {
   const seed = i * 13 + 5;
   return {
-    id: `nearby_${i + 1}`,
+    id: `orbit_${i + 1}`,
     nickname,
     avatar: `https://i.pravatar.cc/150?img=${((i + 20) % 70) + 1}`,
     distanceKm: parseFloat(((i + 1) * 1.7 % 50 + 0.5).toFixed(1)),
@@ -85,7 +85,7 @@ export const mockNearbyUsers: NearbyUser[] = nicknames.map((nickname, i) => {
       funny: 50 + ((i * 3) % 45),
       respectful: 70 + ((i * 5) % 30),
     },
-    bio: 'Just exploring nearby, say hi if we share something in common!',
+    bio: 'Just exploring orbit, say hi if we share something in common!',
     lastSeenMins: (i * 4) % 60,
     crossedPathsToday: i % 4 === 0,
   };
@@ -104,26 +104,26 @@ export interface ActivityRoom {
   id: string;
   name: string;
   emoji: string;
-  nearbyCount: number;
+  orbitCount: number;
 }
 
 export const mockActivityRooms: ActivityRoom[] = [
-  { id: 'room_coffee', name: 'Coffee Lovers', emoji: '☕', nearbyCount: 6 },
-  { id: 'room_gamers', name: 'Gamers', emoji: '🎮', nearbyCount: 11 },
-  { id: 'room_devs', name: 'Developers', emoji: '💻', nearbyCount: 4 },
-  { id: 'room_gym', name: 'Gym Buddies', emoji: '💪', nearbyCount: 8 },
-  { id: 'room_books', name: 'Book Readers', emoji: '📚', nearbyCount: 3 },
+  { id: 'room_coffee', name: 'Coffee Lovers', emoji: '☕', orbitCount: 6 },
+  { id: 'room_gamers', name: 'Gamers', emoji: '🎮', orbitCount: 11 },
+  { id: 'room_devs', name: 'Developers', emoji: '💻', orbitCount: 4 },
+  { id: 'room_gym', name: 'Gym Buddies', emoji: '💪', orbitCount: 8 },
+  { id: 'room_books', name: 'Book Readers', emoji: '📚', orbitCount: 3 },
 ];
 
-export interface NearbyEvent {
+export interface OrbitEvent {
   id: string;
   text: string;
   cta: string;
   count: number;
 }
 
-export const mockNearbyEvents: NearbyEvent[] = [
-  { id: 'evt_dev', text: '4 developers nearby', cta: 'Create a coding room?', count: 4 },
-  { id: 'evt_cricket', text: '8 cricket fans nearby', cta: 'Start a discussion?', count: 8 },
-  { id: 'evt_movie', text: '5 movie buffs nearby', cta: 'Start a watch party chat?', count: 5 },
+export const mockOrbitEvents: OrbitEvent[] = [
+  { id: 'evt_dev', text: '4 developers orbit', cta: 'Create a coding room?', count: 4 },
+  { id: 'evt_cricket', text: '8 cricket fans orbit', cta: 'Start a discussion?', count: 8 },
+  { id: 'evt_movie', text: '5 movie buffs orbit', cta: 'Start a watch party chat?', count: 5 },
 ];

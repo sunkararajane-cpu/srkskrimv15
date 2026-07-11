@@ -134,7 +134,7 @@ export function SparkEnergyMeter({ spark, currentUser, onShowToast }: SparkEnerg
   const notifyCreator = (boostPercent: number) => {
     if (isOwnSpark) return;
     try {
-      const notifsStr = localStorage.getItem('skrimchat_notifications');
+      const notifsStr = localStorage.getItem('skrimchat_signals');
       let notifs = [];
       if (notifsStr) { try { notifs = JSON.parse(notifsStr); } catch(e){} }
       notifs.unshift({
@@ -144,7 +144,7 @@ export function SparkEnergyMeter({ spark, currentUser, onShowToast }: SparkEnerg
         timestamp: Date.now(),
         read: false
       });
-      localStorage.setItem('skrimchat_notifications', JSON.stringify(notifs));
+      localStorage.setItem('skrimchat_signals', JSON.stringify(notifs));
     } catch(e) {}
 
     try {

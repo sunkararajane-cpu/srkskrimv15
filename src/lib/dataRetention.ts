@@ -191,8 +191,8 @@ function cascadeRemovePulsePost(postId: string) {
     writeJSON('skrimchat_edited_post_texts', editedTexts);
   }
 
-  // Strip any notifications referencing the deleted post.
-  removeNotificationsReferencing({ postId });
+  // Strip any signals referencing the deleted post.
+  removeSignalsReferencing({ postId });
 }
 
 function cascadeRemoveVibePost(vibeId: string) {
@@ -223,20 +223,20 @@ function cascadeRemoveVibePost(vibeId: string) {
     writeJSON('skrimchat_saved_posts_full', savedFull.filter(p => p?.id !== vibeId));
   }
 
-  removeNotificationsReferencing({ vibeId });
+  removeSignalsReferencing({ vibeId });
 }
 
-function removeNotificationsReferencing(ref: { postId?: string; vibeId?: string }) {
+function removeSignalsReferencing(ref: { postId?: string; vibeId?: string }) {
   const matches = (n: any) =>
     (ref.postId && n?.postId === ref.postId) ||
     (ref.vibeId && n?.vibeId === ref.vibeId) ||
     (ref.postId && n?.spark?.id === ref.postId) ||
     (ref.vibeId && n?.spark?.id === ref.vibeId);
 
-  const realNotifs = readJSON<any[]>('skrimchat_real_notifications', []);
+  const realNotifs = readJSON<any[]>('skrimchat_real_signals', []);
   const filteredReal = realNotifs.filter(n => !matches(n));
   if (filteredReal.length !== realNotifs.length) {
-    writeJSON('skrimchat_real_notifications', filteredReal);
+    writeJSON('skrimchat_real_signals', filteredReal);
   }
 
   const inAppNotifs = readJSON<any[]>('skrimchat_inapp_notifs', []);
@@ -308,16 +308,16 @@ function sweepReshare(durationDays: RetentionDurationDays, now: number) {
 }
 
 // Tags/mentions live in two places depending on how they were generated:
-// the real notification store's persisted array, and the lightweight
-// "in-app" notification queue used by Sparks/Pulse for live toasts.
+// the real signal store's persisted array, and the lightweight
+// "in-app" signal queue used by Sparks/Pulse for live toasts.
 function sweepTags(durationDays: RetentionDurationDays, now: number) {
-  const realNotifs = readJSON<any[]>('skrimchat_real_notifications', []);
+  const realNotifs = readJSON<any[]>('skrimchat_real_signals', []);
   const keptReal = realNotifs.filter(n => {
     if (n?.type !== 'mention') return true;
     return !isExpired(n?.createdAt, durationDays, now);
   });
   if (keptReal.length !== realNotifs.length) {
-    writeJSON('skrimchat_real_notifications', keptReal);
+    writeJSON('skrimchat_real_signals', keptReal);
   }
 
   const inAppNotifs = readJSON<any[]>('skrimchat_inapp_notifs', []);

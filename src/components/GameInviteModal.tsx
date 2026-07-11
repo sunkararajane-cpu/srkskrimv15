@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Copy, Check, Send, Users, Sparkles, Link, CheckCircle2 } from 'lucide-react';
 import { MOCK_CHATS, MockChatEntry } from '../lib/mock/mockChatDirectory';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 
 interface GameInviteModalProps {
   isOpen: boolean;
@@ -15,7 +15,7 @@ interface GameInviteModalProps {
 export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji }: GameInviteModalProps) {
   const [copied, setCopied] = useState(false);
   const [invitedChats, setInvitedChats] = useState<Record<string, boolean>>({});
-  const [showNotification, setShowNotification] = useState<string | null>(null);
+  const [showSignal, setShowSignal] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState('');
 
   useEffect(() => {
@@ -70,11 +70,11 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
 
     // SIMULATION MOCK (as requested): After 3 seconds, simulate friend accepting and joining lobby
     setTimeout(() => {
-      setShowNotification(chat.name);
-      // Persist it as a real Signal notification too — the in-modal toast
+      setShowSignal(chat.name);
+      // Persist it as a real Signal signal too — the in-modal toast
       // disappears once this sheet closes, so without this the person has
       // no record that their invite was accepted after they navigate away.
-      useNotificationStore.getState().addNotification({
+      useSignalStore.getState().addSignal({
         type: 'game_invite',
         user: chat.name,
         avatar: chat.avatar || '',
@@ -83,7 +83,7 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
         chatId: chat.id,
       });
       // Automatically clear after 4 seconds
-      setTimeout(() => setShowNotification(null), 4000);
+      setTimeout(() => setShowSignal(null), 4000);
     }, 3000);
   };
 
@@ -93,7 +93,7 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
     <>
       {/* Floating Mock Acceptance Toast */}
       <AnimatePresence>
-        {showNotification && (
+        {showSignal && (
           <motion.div
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -106,11 +106,11 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
               </div>
               <div className="flex-1">
                 <p className="text-xs text-emerald-400 font-black uppercase tracking-wider">Lobby Update</p>
-                <p className="text-sm font-bold text-white">{showNotification} accepted your invite! ✅</p>
+                <p className="text-sm font-bold text-white">{showSignal} accepted your invite! ✅</p>
                 <p className="text-[10px] text-white/50">Lobby room created. Game can begin!</p>
               </div>
               <button 
-                onClick={() => setShowNotification(null)}
+                onClick={() => setShowSignal(null)}
                 className="text-white/40 hover:text-white"
               >
                 <X className="w-4 h-4" />

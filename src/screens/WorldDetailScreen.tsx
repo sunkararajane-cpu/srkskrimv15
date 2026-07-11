@@ -289,11 +289,11 @@ export default function WorldDetailScreen() {
                   <button
                     onClick={() => {
                       setShowMenu(false);
-                      navigate(`/world/${world.id}/notifications`);
+                      navigate(`/world/${world.id}/signals`);
                     }}
                     className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors border-b border-white/5 flex items-center justify-between"
                   >
-                    Notifications <Bell size={14} className="text-[#888899]" />
+                    Signals <Bell size={14} className="text-[#888899]" />
                   </button>
                   <button className="w-full text-left px-4 py-3 text-sm text-[#9CA3AF] hover:bg-white/5 transition-colors border-b border-white/5">
                     World Settings

@@ -39,7 +39,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { SKRIM_REACTIONS, mockUsers } from "../lib/mock/mockData";
-import { useNotificationStore } from "../store/notificationStore";
+import { useSignalStore } from "../store/signalStore";
 import { MOCK_CHATS } from "../lib/mock/mockChatDirectory";
 import { QRCodeSVG } from "qrcode.react";
 import { generateVideoThumbnail } from "../lib/services/thumbnailService";
@@ -941,7 +941,7 @@ export function SparkViewer({
       if (spark.reactions) spark.reactions[emoji] = (spark.reactions[emoji] || 0) + 1;
     } catch (e) {}
 
-    // Notify the creator of the Spark via in-app notifications
+    // Notify the creator of the Spark via in-app signals
     if (!isOwnSpark) {
       try {
         const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
@@ -958,8 +958,8 @@ export function SparkViewer({
         });
         localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
 
-        // Add real notification to store
-        useNotificationStore.getState().addNotification({
+        // Add real signal to store
+        useSignalStore.getState().addSignal({
           type: 'vibe_like',
           user: currentUser?.username || 'me',
           avatar: currentUser?.avatar || '',
@@ -1218,7 +1218,7 @@ export function SparkViewer({
       window.dispatchEvent(new Event('skrimchat_custom_chats_updated'));
     } catch (e) {}
 
-    // Notify the creator via in-app notifications
+    // Notify the creator via in-app signals
     if (!isOwnSpark) {
       try {
         const inApp = JSON.parse(localStorage.getItem('skrimchat_inapp_notifs') || '[]');
@@ -1235,8 +1235,8 @@ export function SparkViewer({
         });
         localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
 
-        // Add real notification to store
-        useNotificationStore.getState().addNotification({
+        // Add real signal to store
+        useSignalStore.getState().addSignal({
           type: 'comment',
           user: currentUser?.username || 'me',
           avatar: currentUser?.avatar || '',
@@ -1366,9 +1366,9 @@ export function SparkViewer({
           stored.unshift(repost);
           localStorage.setItem('skrimchat_sparks', JSON.stringify(stored));
 
-          // Trigger notification
+          // Trigger signal
           if (!isOwnSpark) {
-            useNotificationStore.getState().addNotification({
+            useSignalStore.getState().addSignal({
               type: 'pulse',
               user: currentUser?.username || 'me',
               avatar: currentUser?.avatar || '',

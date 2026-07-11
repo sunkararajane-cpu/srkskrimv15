@@ -483,7 +483,7 @@ export function VeilUnlockedInbox({ isDecoyMode }: VeilUnlockedInboxProps) {
                   className="flex items-center gap-3 px-4 py-3 text-white hover:bg-[rgba(255,255,255,0.05)] rounded-xl transition-colors w-full text-left"
                 >
                   <BellOff size={18} className={contextMenuState.conversation.muted ? "text-[#7B2FF7]" : "text-[#888899]"} />
-                  <span className="text-sm">{contextMenuState.conversation.muted ? "Unmute notifications" : "Mute notifications"}</span>
+                  <span className="text-sm">{contextMenuState.conversation.muted ? "Unmute signals" : "Mute signals"}</span>
                 </button>
                 <button 
                   onClick={() => {

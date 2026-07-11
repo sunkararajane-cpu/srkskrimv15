@@ -401,7 +401,7 @@ export const mockMessages = Array.from({ length: 20 }).map((_, i) => ({
   read: true,
 }));
 
-export const mockNotifications = Array.from({ length: 10 }).map((_, i) => ({
+export const mockSignals = Array.from({ length: 10 }).map((_, i) => ({
   id: `notif_${i + 1}`,
   type: ["pulse", "comment", "mention", "follow"][i % 4],
   user: mockUsers[i % mockUsers.length].displayName,

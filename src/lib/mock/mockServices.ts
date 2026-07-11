@@ -1,7 +1,7 @@
 import { FEATURE_FLAGS } from '../config/featureFlags';
 import { 
   mockPosts, mockSparks, mockReels, mockChats, 
-  mockMessages, mockNotifications, mockCommunities, 
+  mockMessages, mockSignals, mockCommunities, 
   mockCreatorStats, mockUsers, mockAds, mockAdminData 
 } from './mockData';
 import { getAllRecords, deleteRecord, sortPostsLatestFirst } from '../services/mediaStorage';
@@ -105,9 +105,9 @@ export const getMessages = async (chatId: string) => {
   return [...mockMessages];
 };
 
-export const getNotifications = async () => {
+export const getSignals = async () => {
   await delay(500);
-  return [...mockNotifications];
+  return [...mockSignals];
 };
 
 

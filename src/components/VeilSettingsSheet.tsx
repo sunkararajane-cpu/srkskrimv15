@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Shield, CheckCircle, BellOff, Trash2, Clock, Lock } from 'lucide-react';
-import { VeilNotification } from './VeilNotificationManager';
+import { VeilSignal } from './VeilSignalManager';
 
 interface VeilSettingsSheetProps {
   onClose: () => void;
@@ -19,10 +19,10 @@ export function VeilSettingsSheet({ onClose }: VeilSettingsSheetProps) {
     return settingsStr ? JSON.parse(settingsStr).silentMode || false : false;
   });
 
-  const [history, setHistory] = useState<VeilNotification[]>([]);
+  const [history, setHistory] = useState<VeilSignal[]>([]);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('veil_notifications_history') || '[]');
+    const stored = JSON.parse(localStorage.getItem('veil_signals_history') || '[]');
     setHistory(stored);
   }, []);
 
@@ -37,7 +37,7 @@ export function VeilSettingsSheet({ onClose }: VeilSettingsSheetProps) {
 
   const clearHistory = () => {
     setHistory([]);
-    localStorage.removeItem('veil_notifications_history');
+    localStorage.removeItem('veil_signals_history');
   };
 
   const formatTime = (ts: number) => {
@@ -139,11 +139,11 @@ export function VeilSettingsSheet({ onClose }: VeilSettingsSheetProps) {
              </div>
            </div>
 
-           {/* Notifications Section */}
+           {/* Signals Section */}
            <div className="mb-8">
              <div className="flex items-center gap-2 mb-4">
                 <BellOff size={16} className="text-[#888899]" />
-                <h3 className="text-[#888899] font-mono text-[11px] uppercase tracking-widest">Notifications</h3>
+                <h3 className="text-[#888899] font-mono text-[11px] uppercase tracking-widest">Signals</h3>
              </div>
              
              <div className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.05)] rounded-2xl p-4 mb-4">
@@ -162,7 +162,7 @@ export function VeilSettingsSheet({ onClose }: VeilSettingsSheetProps) {
                <div className="flex items-center justify-between mb-4">
                  <div className="flex items-center gap-2">
                    <Clock size={16} className="text-[#888899]" />
-                   <span className="text-white font-mono text-[11px] tracking-widest uppercase">Notification History</span>
+                   <span className="text-white font-mono text-[11px] tracking-widest uppercase">Signal History</span>
                  </div>
                  <button onClick={clearHistory} className="text-[#888899] hover:text-[#FF3B3B] transition-colors p-1">
                    <Trash2 size={14} />

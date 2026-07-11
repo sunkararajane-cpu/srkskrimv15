@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useWorlds, useWorldMembership } from "../hooks/useWorldMembership";
 import { CommunityCreateFlow } from "../components/CommunityCreateFlow";
 import { WorldSearch } from "../components/WorldSearch";
-import { useWorldNotificationStore } from "../store/worldNotificationStore";
+import { useWorldSignalStore } from "../store/worldSignalStore";
 
 const PRESET_ATMOSPHERES: Record<string, string[]> = {
   nebula: ["#7B2FF7", "#B026FF"],
@@ -37,8 +37,8 @@ export default function WorldsScreen() {
   });
 
   const ALL_COMMUNITIES = useWorlds();
-  const unreadNotifCount = useWorldNotificationStore(
-    (s) => s.notifications.filter((n) => !n.read).length
+  const unreadNotifCount = useWorldSignalStore(
+    (s) => s.signals.filter((n) => !n.read).length
   );
   const [showCreateFlow, setShowCreateFlow] = useState(false);
 

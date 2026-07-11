@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FEATURE_FLAGS } from '../lib/config/featureFlags';
 import { AvatarWithRing } from '../components/ui';
 import { Link } from 'react-router-dom';
-import { useNotificationStore, simulatePulseReward } from '../store/notificationStore';
+import { useSignalStore, simulatePulseReward } from '../store/signalStore';
 
 import { ArrowLeft } from 'lucide-react';
 import { SparkViewer } from '../components/SparkViewer';
@@ -14,7 +14,7 @@ import { deleteRecord } from '../lib/services/mediaStorage';
 
 export default function SignalScreen() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [signals, setSignals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [activeSpark, setActiveSpark] = useState<any>(null);
@@ -22,14 +22,14 @@ export default function SignalScreen() {
   const [showNotifSettings, setShowNotifSettings] = useState(false);
   
   const { 
-    globalVibeNotificationsEnabled, 
-    toggleGlobalVibeNotifications,
+    globalVibeSignalsEnabled, 
+    toggleGlobalVibeSignals,
     soundEffectsEnabled,
     toggleSoundEffects,
-    notifications: storeNotifications,
-    markNotificationAsRead,
+    signals: storeSignals,
+    markSignalAsRead,
     markAllAsRead
-  } = useNotificationStore();
+  } = useSignalStore();
   const currentUser = useCurrentUser();
 
   useEffect(() => {
@@ -37,10 +37,10 @@ export default function SignalScreen() {
       setLoading(true);
       let loadedNotifs: any[] = [];
       if (FEATURE_FLAGS.MOCK_MODE) {
-        // Use real notifications from store instead of static ones
-        const baseNotifs = storeNotifications;
+        // Use real signals from store instead of static ones
+        const baseNotifs = storeSignals;
         
-        // Inject FOMO notifications
+        // Inject FOMO signals
         const fomoNotifs = [
            { id: 'fomo1', user: 'NeonSamurai', avatar: 'https://i.pravatar.cc/150?img=2', type: 'fomo', text: 'just became a BLAZE CREATOR! 🔥', isRead: false, time: '2m' },
            { id: 'fomo2', user: 'CyberGhost', avatar: 'https://i.pravatar.cc/150?img=1', type: 'fomo', text: 'unlocked the FLAME CREATOR badge! ☄️', isRead: true, time: '1h' }
@@ -124,35 +124,35 @@ export default function SignalScreen() {
       try {
         const readIds = new Set<string>(JSON.parse(localStorage.getItem('skrimchat_signal_read_ids') || '[]'));
         loadedNotifs = loadedNotifs.map((n: any) => {
-          const isStoreNotif = storeNotifications.some((sn: any) => sn.id === n.id);
+          const isStoreNotif = storeSignals.some((sn: any) => sn.id === n.id);
           if (isStoreNotif) return n;
           return readIds.has(n.id) ? { ...n, isRead: true } : n;
         });
       } catch (e) {}
-      setNotifications(loadedNotifs);
+      setSignals(loadedNotifs);
       setLoading(false);
     };
     fetchNotifs();
-  }, [storeNotifications]);
+  }, [storeSignals]);
 
   const markAsRead = () => {
     markAllAsRead();
-    const allIds = notifications.map(n => n.id);
+    const allIds = signals.map(n => n.id);
     const readSet = new Set<string>(JSON.parse(localStorage.getItem('skrimchat_signal_read_ids') || '[]'));
     allIds.forEach(id => readSet.add(id));
     localStorage.setItem('skrimchat_signal_read_ids', JSON.stringify([...readSet]));
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    setSignals(signals.map(n => ({ ...n, isRead: true })));
     localStorage.setItem('skrimchat_signal_unread', '0');
     window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: 0 }));
   };
 
   useEffect(() => {
-    const unread = notifications.filter(n => !n.isRead).length;
+    const unread = signals.filter(n => !n.isRead).length;
     localStorage.setItem('skrimchat_signal_unread', String(unread));
     window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
-  }, [notifications]);
+  }, [signals]);
 
-  const filtered = notifications.filter(n => {
+  const filtered = signals.filter(n => {
     if (activeTab === 'unread') return !n.isRead;
     if (activeTab === 'mentions') return n.type === 'mention';
     return true;
@@ -187,7 +187,7 @@ export default function SignalScreen() {
         ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center flex-1 text-center p-8 opacity-50">
               <Bell className="w-8 h-8 mb-2" />
-              <p className="text-sm">No notifications here.</p>
+              <p className="text-sm">No signals here.</p>
             </div>
         ) : filtered.map(notif => (
             <div key={notif.id} className={`flex items-center gap-4 py-4 border-b border-white/5 ${!notif.isRead ? 'bg-neon-purple/5 -mx-4 px-4' : ''}`}>
@@ -216,16 +216,16 @@ export default function SignalScreen() {
                  </div>
               </div>
               <div className="flex-1" onClick={() => {
-                 // Mark this single notification read on tap, and persist it.
+                 // Mark this single signal read on tap, and persist it.
                  if (!notif.isRead) {
-                   const isStoreNotif = storeNotifications.some((sn: any) => sn.id === notif.id);
+                   const isStoreNotif = storeSignals.some((sn: any) => sn.id === notif.id);
                    if (isStoreNotif) {
-                     markNotificationAsRead(notif.id);
+                     markSignalAsRead(notif.id);
                    } else {
                      const readSet = new Set<string>(JSON.parse(localStorage.getItem('skrimchat_signal_read_ids') || '[]'));
                      readSet.add(notif.id);
                      localStorage.setItem('skrimchat_signal_read_ids', JSON.stringify([...readSet]));
-                     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+                     setSignals(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
                    }
                  }
                  if (notif.type === 'grind_reminder') {
@@ -342,7 +342,7 @@ export default function SignalScreen() {
           }}
         />
       )}
-      {/* NOTIFICATION SETTINGS */}
+      {/* SIGNAL SETTINGS */}
       <AnimatePresence>
         {showNotifSettings && (
            <>
@@ -365,7 +365,7 @@ export default function SignalScreen() {
                  <button onClick={() => setShowNotifSettings(false)} className="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors text-white/70">
                    <X className="w-5 h-5" />
                  </button>
-                 <h2 className="text-xl font-bold text-white flex items-center gap-2"><Bell className="w-5 h-5 text-[#00F0FF]" /> Notifications</h2>
+                 <h2 className="text-xl font-bold text-white flex items-center gap-2"><Bell className="w-5 h-5 text-[#00F0FF]" /> Signals</h2>
                </div>
                
                <div className="p-4 flex flex-col gap-3 overflow-y-auto pb-8">
@@ -419,15 +419,15 @@ export default function SignalScreen() {
                         New Vibes from Followed Creators
                      </p>
                      <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
-                       Receive push notifications and in-app alerts when people you follow post new Vibes.
+                       Receive push signals and in-app alerts when people you follow post new Vibes.
                      </p>
                    </div>
                    
                    <button 
-                      onClick={() => toggleGlobalVibeNotifications()}
-                      className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${globalVibeNotificationsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                      onClick={() => toggleGlobalVibeSignals()}
+                      className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${globalVibeSignalsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                    >
-                      <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${globalVibeNotificationsEnabled ? 'left-7' : 'left-1'}`} />
+                      <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${globalVibeSignalsEnabled ? 'left-7' : 'left-1'}`} />
                    </button>
                  </div>
 
@@ -443,29 +443,29 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().toggleLikesNotifications(!useNotificationStore.getState().likesNotificationsEnabled)}
-                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useNotificationStore.getState().likesNotificationsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().toggleLikesSignals(!useSignalStore.getState().likesSignalsEnabled)}
+                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useSignalStore.getState().likesSignalsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().likesNotificationsEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().likesSignalsEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                    
-                   {useNotificationStore.getState().likesNotificationsEnabled && (
+                   {useSignalStore.getState().likesSignalsEnabled && (
                      <div className="flex items-start justify-between gap-3 p-5 pl-8 bg-black/20">
                        <div className="flex-1 pr-4">
                          <p className="font-medium text-white text-base leading-snug">
                             Only milestone likes
                          </p>
                          <p className="text-white/50 text-xs mt-1.5 leading-relaxed">
-                           Limit notifications to major milestones (10, 100, 1K...).
+                           Limit signals to major milestones (10, 100, 1K...).
                          </p>
                        </div>
                        
                        <button 
-                          onClick={() => useNotificationStore.getState().toggleLikesMilestonesOnly(!useNotificationStore.getState().likesMilestonesOnly)}
-                          className={`relative w-12 h-6 mt-1 rounded-full transition-colors ${useNotificationStore.getState().likesMilestonesOnly ? 'bg-[#1DB954]' : 'bg-white/20'}`}
+                          onClick={() => useSignalStore.getState().toggleLikesMilestonesOnly(!useSignalStore.getState().likesMilestonesOnly)}
+                          className={`relative w-12 h-6 mt-1 rounded-full transition-colors ${useSignalStore.getState().likesMilestonesOnly ? 'bg-[#1DB954]' : 'bg-white/20'}`}
                        >
-                          <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().likesMilestonesOnly ? 'left-7' : 'left-1'}`} />
+                          <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().likesMilestonesOnly ? 'left-7' : 'left-1'}`} />
                        </button>
                      </div>
                    )}
@@ -483,10 +483,10 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().toggleCommentsNotifications(!useNotificationStore.getState().commentsNotificationsEnabled)}
-                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useNotificationStore.getState().commentsNotificationsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().toggleCommentsSignals(!useSignalStore.getState().commentsSignalsEnabled)}
+                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useSignalStore.getState().commentsSignalsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().commentsNotificationsEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().commentsSignalsEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                    
@@ -501,10 +501,10 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().toggleRepliesNotifications(!useNotificationStore.getState().repliesNotificationsEnabled)}
-                        className={`relative w-12 h-6 mt-1 rounded-full transition-colors ${useNotificationStore.getState().repliesNotificationsEnabled ? 'bg-[#1DB954]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().toggleRepliesSignals(!useSignalStore.getState().repliesSignalsEnabled)}
+                        className={`relative w-12 h-6 mt-1 rounded-full transition-colors ${useSignalStore.getState().repliesSignalsEnabled ? 'bg-[#1DB954]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().repliesNotificationsEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().repliesSignalsEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                  </div>
@@ -521,14 +521,14 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().toggleBlazeRunReminders(!useNotificationStore.getState().blazeRunRemindersEnabled)}
-                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useNotificationStore.getState().blazeRunRemindersEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().toggleBlazeRunReminders(!useSignalStore.getState().blazeRunRemindersEnabled)}
+                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useSignalStore.getState().blazeRunRemindersEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().blazeRunRemindersEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().blazeRunRemindersEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                    
-                   {useNotificationStore.getState().blazeRunRemindersEnabled && (
+                   {useSignalStore.getState().blazeRunRemindersEnabled && (
                      <div className="flex items-start justify-between gap-3 p-5 pl-8 bg-black/20">
                        <div className="flex-1 pr-4">
                          <p className="font-medium text-white text-base leading-snug">
@@ -539,8 +539,8 @@ export default function SignalScreen() {
                        <input 
                           type="time" 
                           className="bg-white/10 border border-white/20 text-white rounded-lg px-3 py-1 outline-none text-sm"
-                          value={useNotificationStore.getState().blazeRunReminderTime}
-                          onChange={(e) => useNotificationStore.getState().setBlazeRunReminderTime(e.target.value)}
+                          value={useSignalStore.getState().blazeRunReminderTime}
+                          onChange={(e) => useSignalStore.getState().setBlazeRunReminderTime(e.target.value)}
                        />
                      </div>
                    )}
@@ -558,10 +558,10 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().togglePulseRewards(!useNotificationStore.getState().pulseRewardsEnabled)}
-                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useNotificationStore.getState().pulseRewardsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().togglePulseRewards(!useSignalStore.getState().pulseRewardsEnabled)}
+                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useSignalStore.getState().pulseRewardsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().pulseRewardsEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().pulseRewardsEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                  </div>
@@ -578,10 +578,10 @@ export default function SignalScreen() {
                      </div>
                      
                      <button 
-                        onClick={() => useNotificationStore.getState().toggleLanguageMatchNotifications(!useNotificationStore.getState().languageMatchNotificationsEnabled)}
-                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useNotificationStore.getState().languageMatchNotificationsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
+                        onClick={() => useSignalStore.getState().toggleLanguageMatchSignals(!useSignalStore.getState().languageMatchSignalsEnabled)}
+                        className={`relative w-14 h-8 mt-1 rounded-full transition-colors ${useSignalStore.getState().languageMatchSignalsEnabled ? 'bg-[#00F0FF]' : 'bg-white/20'}`}
                      >
-                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useNotificationStore.getState().languageMatchNotificationsEnabled ? 'left-7' : 'left-1'}`} />
+                        <div className={`w-6 h-6 rounded-full bg-white absolute top-1 transition-all ${useSignalStore.getState().languageMatchSignalsEnabled ? 'left-7' : 'left-1'}`} />
                      </button>
                    </div>
                  </div>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export interface Notification {
+export interface Signal {
   id: string;
   type: 'pulse' | 'comment' | 'mention' | 'follow' | 'fomo' | 'collab_invite' | 'new_vibe' | 'vibe_like' | 'vibe_comment' | 'vibe_reply' | 'grind_reminder' | 'lang_match' | 'alert' | 'world_join' | 'game_invite' | 'world_admin' | 'message';
   user: string;
@@ -20,38 +20,38 @@ export interface Notification {
   createdAt?: number; // epoch ms — used by the Data Retention engine for Tags/mentions expiry
 }
 
-interface NotificationState {
-  globalVibeNotificationsEnabled: boolean;
-  toggleGlobalVibeNotifications: () => void;
-  likesNotificationsEnabled: boolean;
-  toggleLikesNotifications: (val: boolean) => void;
+interface SignalState {
+  globalVibeSignalsEnabled: boolean;
+  toggleGlobalVibeSignals: () => void;
+  likesSignalsEnabled: boolean;
+  toggleLikesSignals: (val: boolean) => void;
   likesMilestonesOnly: boolean;
   toggleLikesMilestonesOnly: (val: boolean) => void;
-  commentsNotificationsEnabled: boolean;
-  toggleCommentsNotifications: (val: boolean) => void;
-  repliesNotificationsEnabled: boolean;
-  toggleRepliesNotifications: (val: boolean) => void;
+  commentsSignalsEnabled: boolean;
+  toggleCommentsSignals: (val: boolean) => void;
+  repliesSignalsEnabled: boolean;
+  toggleRepliesSignals: (val: boolean) => void;
   blazeRunRemindersEnabled: boolean;
   toggleBlazeRunReminders: (val: boolean) => void;
   blazeRunReminderTime: string;
   setBlazeRunReminderTime: (val: string) => void;
   pulseRewardsEnabled: boolean;
   togglePulseRewards: (val: boolean) => void;
-  languageMatchNotificationsEnabled: boolean;
-  toggleLanguageMatchNotifications: (val: boolean) => void;
+  languageMatchSignalsEnabled: boolean;
+  toggleLanguageMatchSignals: (val: boolean) => void;
   requestPushPermission: () => void;
-  creatorNotificationPrefs: Record<string, boolean>;
-  toggleCreatorNotifications: (id: string) => void;
+  creatorSignalPrefs: Record<string, boolean>;
+  toggleCreatorSignals: (id: string) => void;
   pulseToasts: any[];
   removePulseToast: (id: string) => void;
   soundEffectsEnabled: boolean;
   toggleSoundEffects: () => void;
   addToast: (points: number, message: string) => void;
   
-  // Real notifications array and actions
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'isRead'>) => void;
-  markNotificationAsRead: (id: string) => void;
+  // Real signals array and actions
+  signals: Signal[];
+  addSignal: (signal: Omit<Signal, 'id' | 'isRead'>) => void;
+  markSignalAsRead: (id: string) => void;
   markAllAsRead: () => void;
 }
 
@@ -87,13 +87,13 @@ const playChime = () => {
   }
 };
 
-const getInitialNotifications = (): Notification[] => {
+const getInitialSignals = (): Signal[] => {
   try {
-    const stored = localStorage.getItem('skrimchat_real_notifications');
+    const stored = localStorage.getItem('skrimchat_real_signals');
     if (stored) return JSON.parse(stored);
   } catch (e) {}
 
-  const seed: Notification[] = [
+  const seed: Signal[] = [
     {
       id: "notif_seed_1",
       type: "pulse",
@@ -132,33 +132,33 @@ const getInitialNotifications = (): Notification[] => {
     }
   ];
   try {
-    localStorage.setItem('skrimchat_real_notifications', JSON.stringify(seed));
+    localStorage.setItem('skrimchat_real_signals', JSON.stringify(seed));
   } catch (e) {}
   return seed;
 };
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  globalVibeNotificationsEnabled: true,
-  toggleGlobalVibeNotifications: () => set((state) => ({ globalVibeNotificationsEnabled: !state.globalVibeNotificationsEnabled })),
-  likesNotificationsEnabled: true,
-  toggleLikesNotifications: (val) => set({ likesNotificationsEnabled: val }),
+export const useSignalStore = create<SignalState>((set, get) => ({
+  globalVibeSignalsEnabled: true,
+  toggleGlobalVibeSignals: () => set((state) => ({ globalVibeSignalsEnabled: !state.globalVibeSignalsEnabled })),
+  likesSignalsEnabled: true,
+  toggleLikesSignals: (val) => set({ likesSignalsEnabled: val }),
   likesMilestonesOnly: false,
   toggleLikesMilestonesOnly: (val) => set({ likesMilestonesOnly: val }),
-  commentsNotificationsEnabled: true,
-  toggleCommentsNotifications: (val) => set({ commentsNotificationsEnabled: val }),
-  repliesNotificationsEnabled: true,
-  toggleRepliesNotifications: (val) => set({ repliesNotificationsEnabled: val }),
+  commentsSignalsEnabled: true,
+  toggleCommentsSignals: (val) => set({ commentsSignalsEnabled: val }),
+  repliesSignalsEnabled: true,
+  toggleRepliesSignals: (val) => set({ repliesSignalsEnabled: val }),
   blazeRunRemindersEnabled: true,
   toggleBlazeRunReminders: (val) => set({ blazeRunRemindersEnabled: val }),
   blazeRunReminderTime: '21:00',
   setBlazeRunReminderTime: (val) => set({ blazeRunReminderTime: val }),
   pulseRewardsEnabled: true,
   togglePulseRewards: (val) => set({ pulseRewardsEnabled: val }),
-  languageMatchNotificationsEnabled: true,
-  toggleLanguageMatchNotifications: (val) => set({ languageMatchNotificationsEnabled: val }),
+  languageMatchSignalsEnabled: true,
+  toggleLanguageMatchSignals: (val) => set({ languageMatchSignalsEnabled: val }),
   requestPushPermission: () => {},
-  creatorNotificationPrefs: {},
-  toggleCreatorNotifications: (id) => set((state) => ({ creatorNotificationPrefs: { ...state.creatorNotificationPrefs, [id]: !state.creatorNotificationPrefs[id] } })),
+  creatorSignalPrefs: {},
+  toggleCreatorSignals: (id) => set((state) => ({ creatorSignalPrefs: { ...state.creatorSignalPrefs, [id]: !state.creatorSignalPrefs[id] } })),
   pulseToasts: [],
   removePulseToast: (id) => set((state) => ({ pulseToasts: state.pulseToasts.filter(toast => toast.id !== id) })),
   soundEffectsEnabled: true,
@@ -176,72 +176,72 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     return { pulseToasts: [...state.pulseToasts, newToast] };
   }),
 
-  notifications: getInitialNotifications(),
-  addNotification: (notification) => set((state) => {
-    const { type } = notification;
+  signals: getInitialSignals(),
+  addSignal: (signal) => set((state) => {
+    const { type } = signal;
 
     // Respect existing preference toggles
-    if ((type === 'vibe_like' || type === 'pulse') && !state.likesNotificationsEnabled) {
+    if ((type === 'vibe_like' || type === 'pulse') && !state.likesSignalsEnabled) {
       return {};
     }
-    if ((type === 'vibe_comment' || type === 'comment') && !state.commentsNotificationsEnabled) {
+    if ((type === 'vibe_comment' || type === 'comment') && !state.commentsSignalsEnabled) {
       return {};
     }
-    if (type === 'vibe_reply' && !state.repliesNotificationsEnabled) {
+    if (type === 'vibe_reply' && !state.repliesSignalsEnabled) {
       return {};
     }
-    if (type === 'new_vibe' && !state.globalVibeNotificationsEnabled) {
+    if (type === 'new_vibe' && !state.globalVibeSignalsEnabled) {
       return {};
     }
     if (type === 'grind_reminder' && !state.blazeRunRemindersEnabled) {
       return {};
     }
-    if (type === 'lang_match' && !state.languageMatchNotificationsEnabled) {
+    if (type === 'lang_match' && !state.languageMatchSignalsEnabled) {
       return {};
     }
 
-    const newNotif: Notification = {
-      ...notification,
+    const newNotif: Signal = {
+      ...signal,
       id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       isRead: false,
-      createdAt: notification.createdAt ?? Date.now(),
+      createdAt: signal.createdAt ?? Date.now(),
     };
 
-    const updated = [newNotif, ...state.notifications];
+    const updated = [newNotif, ...state.signals];
     try {
-      localStorage.setItem('skrimchat_real_notifications', JSON.stringify(updated));
+      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
     } catch (e) {}
     
     const unread = updated.filter(n => !n.isRead).length;
     localStorage.setItem('skrimchat_signal_unread', String(unread));
     window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
 
-    return { notifications: updated };
+    return { signals: updated };
   }),
-  markNotificationAsRead: (id) => set((state) => {
-    const updated = state.notifications.map((n) =>
+  markSignalAsRead: (id) => set((state) => {
+    const updated = state.signals.map((n) =>
       n.id === id ? { ...n, isRead: true } : n
     );
     try {
-      localStorage.setItem('skrimchat_real_notifications', JSON.stringify(updated));
+      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
     } catch (e) {}
 
     const unread = updated.filter(n => !n.isRead).length;
     localStorage.setItem('skrimchat_signal_unread', String(unread));
     window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: unread }));
 
-    return { notifications: updated };
+    return { signals: updated };
   }),
   markAllAsRead: () => set((state) => {
-    const updated = state.notifications.map((n) => ({ ...n, isRead: true }));
+    const updated = state.signals.map((n) => ({ ...n, isRead: true }));
     try {
-      localStorage.setItem('skrimchat_real_notifications', JSON.stringify(updated));
+      localStorage.setItem('skrimchat_real_signals', JSON.stringify(updated));
     } catch (e) {}
 
     localStorage.setItem('skrimchat_signal_unread', '0');
     window.dispatchEvent(new CustomEvent('skrimchat_signal_badge', { detail: 0 }));
 
-    return { notifications: updated };
+    return { signals: updated };
   }),
 }));
 
@@ -250,7 +250,7 @@ export const simulateCreatorPost = (user: any, reel: any) => {};
 export const simulateVibeLike = (user: any, reel: any, likes: number) => {};
 export const simulateVibeComment = (user: any, comment: any, reel: any, reply: boolean) => {};
 export const scheduleGrindReminder = () => {};
-export const showGrindNotification = (count: number) => {};
+export const showGrindSignal = (count: number) => {};
 export const checkGrindRisk = () => ({ atRisk: false, grindCount: 0 });
 
 export const simulatePulseReward = (event: string) => {
@@ -273,7 +273,7 @@ export const simulatePulseReward = (event: string) => {
     msg = event || "Received Pulse Reward! ⚡";
   }
   
-  useNotificationStore.getState().addToast(points, msg);
+  useSignalStore.getState().addToast(points, msg);
 };
 
-export const simulateLanguageMatchNotification = (langs: string[], count: number, force: boolean) => {};
+export const simulateLanguageMatchSignal = (langs: string[], count: number, force: boolean) => {};

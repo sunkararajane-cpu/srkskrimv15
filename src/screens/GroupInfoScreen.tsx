@@ -479,7 +479,7 @@ export default function GroupInfoScreen() {
     setNewPollQuestion("");
     setNewPollOptions(["", ""]);
 
-    // Also append a poll notification in the group chat history
+    // Also append a poll signal in the group chat history
     try {
       const activeChatId = groupId || "3"; // default to Telugu Squad
       const chatKey = `skrimchat_messages_${activeChatId}`;
@@ -493,7 +493,7 @@ export default function GroupInfoScreen() {
 
       const pollMsg = {
         id: "msg_poll_" + Date.now(),
-        sender: "them" as const, // align left like a received notification
+        sender: "them" as const, // align left like a received signal
         senderName: "📊 GROUP POLL",
         senderAvatar: group.avatar || "🔥",
         senderIsAdmin: true,
@@ -580,7 +580,7 @@ export default function GroupInfoScreen() {
     };
     setAnnouncements(prev => [newAnn, ...prev]);
 
-    // Also append a text notification in the group chat history
+    // Also append a text signal in the group chat history
     try {
       const activeChatId = groupId || "3"; // default to Telugu Squad
       const chatKey = `skrimchat_messages_${activeChatId}`;
@@ -594,7 +594,7 @@ export default function GroupInfoScreen() {
 
       const announcementMsg = {
         id: "msg_ann_" + Date.now(),
-        sender: "them" as const, // align left like a received notification
+        sender: "them" as const, // align left like a received signal
         senderName: "📢 ANNOUNCEMENT",
         senderAvatar: group.avatar || "🔥",
         senderIsAdmin: true,
@@ -772,7 +772,7 @@ export default function GroupInfoScreen() {
         >
           <div className="flex items-center">
             <span className="w-6 opacity-60">🔔</span>
-            <span className="text-sm font-medium">Notifications</span>
+            <span className="text-sm font-medium">Signals</span>
           </div>
           {isMuted && (
             <span className="text-xs text-white/50 bg-white/10 px-2 py-0.5 rounded">
@@ -1741,7 +1741,7 @@ export default function GroupInfoScreen() {
             >
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-white font-bold text-lg">
-                  Mute notifications
+                  Mute signals
                 </h3>
                 <button
                   onClick={() => setShowMuteSheet(false)}
@@ -1788,7 +1788,7 @@ export default function GroupInfoScreen() {
                   }}
                   className="w-full bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20 font-bold py-4 rounded-xl transition"
                 >
-                  Unmute Notifications
+                  Unmute Signals
                 </button>
               )}
             </motion.div>

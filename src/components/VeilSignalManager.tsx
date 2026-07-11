@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-export interface VeilNotification {
+export interface VeilSignal {
   id: string;
   type: 'message' | 'invitation';
   receivedAt: number;
 }
 
-export function VeilNotificationManager() {
-  const [notifications, setNotifications] = useState<VeilNotification[]>([]);
+export function VeilSignalManager() {
+  const [signals, setSignals] = useState<VeilSignal[]>([]);
   const [showBanner, setShowBanner] = useState(false);
   const [expanded, setExpanded] = useState(false);
   
@@ -19,41 +19,41 @@ export function VeilNotificationManager() {
 
   useEffect(() => {
     // Load from local storage
-    const stored = JSON.parse(localStorage.getItem('veil_notifications') || '[]');
-    setNotifications(stored);
+    const stored = JSON.parse(localStorage.getItem('veil_signals') || '[]');
+    setSignals(stored);
 
     const onNotify = (e: Event) => {
       const customEvent = e as CustomEvent;
       const data = customEvent.detail as { type?: 'message' | 'invitation', count?: number };
       
-      const newNotif: VeilNotification = {
+      const newNotif: VeilSignal = {
         id: `vn_${Date.now()}_${Math.random()}`,
         type: data.type || 'message',
         receivedAt: Date.now()
       };
       
       const count = data.count || 1;
-      let addedTokens: VeilNotification[] = [];
+      let addedTokens: VeilSignal[] = [];
       for (let i = 0; i < count; i++) {
         addedTokens.push({ ...newNotif, id: `${newNotif.id}_${i}` });
       }
 
       const settingsStr = localStorage.getItem('veil_settings');
       const settings = settingsStr ? JSON.parse(settingsStr) : {};
-      const silentMode = settings.silentMode === true || (settings.notifications && settings.notifications.silentMode === true);
+      const silentMode = settings.silentMode === true || (settings.signals && settings.signals.silentMode === true);
       
       const veilIsOpen = location.pathname.startsWith('/veil');
       const veilIsUnlocked = localStorage.getItem('veil_auth_temp') === 'true';
 
-      setNotifications(prev => {
+      setSignals(prev => {
         const next = [...addedTokens, ...prev];
-        localStorage.setItem('veil_notifications', JSON.stringify(next));
+        localStorage.setItem('veil_signals', JSON.stringify(next));
         
         // Also save to history for settings log
-        const historyJson = localStorage.getItem('veil_notifications_history');
+        const historyJson = localStorage.getItem('veil_signals_history');
         const history = historyJson ? JSON.parse(historyJson) : [];
         const nextHistory = [...addedTokens, ...history].slice(0, 100); // keep last 100
-        localStorage.setItem('veil_notifications_history', JSON.stringify(nextHistory));
+        localStorage.setItem('veil_signals_history', JSON.stringify(nextHistory));
         
         return next;
       });
@@ -72,8 +72,8 @@ export function VeilNotificationManager() {
     };
 
     const onClear = () => {
-      setNotifications([]);
-      localStorage.removeItem('veil_notifications');
+      setSignals([]);
+      localStorage.removeItem('veil_signals');
     };
 
     window.addEventListener('veil_notify', onNotify);
@@ -103,16 +103,16 @@ export function VeilNotificationManager() {
   let body = "New secure message";
   let icon = <Lock size={16} className="text-white" />;
 
-  if (notifications.length === 1 && notifications[0].type === 'invitation') {
+  if (signals.length === 1 && signals[0].type === 'invitation') {
     icon = <span className="text-white font-serif text-sm">🕶</span>;
     body = "New Veil invitation";
-  } else if (notifications.length > 4) {
+  } else if (signals.length > 4) {
     body = "Multiple Veil messages";
-  } else if (notifications.length > 1) {
-    if (notifications.every(n => n.type === 'message')) {
-      body = `${notifications.length} new secure messages`;
+  } else if (signals.length > 1) {
+    if (signals.every(n => n.type === 'message')) {
+      body = `${signals.length} new secure messages`;
     } else {
-      body = `${notifications.length} new notifications`;
+      body = `${signals.length} new signals`;
     }
   }
 
@@ -161,7 +161,7 @@ export function VeilNotificationManager() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   {icon}
-                  <span className="text-white font-medium text-[15px]">Veil Notification</span>
+                  <span className="text-white font-medium text-[15px]">Veil Signal</span>
                 </div>
                 <button onClick={handleExpandedDismiss} className="text-[#888899] hover:text-white p-1">
                   ✕
@@ -170,8 +170,8 @@ export function VeilNotificationManager() {
 
               <div className="bg-[#111115] rounded-xl p-4 mb-4">
                 <p className="text-[#888899] text-[14px] leading-relaxed">
-                  You have {notifications.length > 1 ? 'new secure Veil messages' : 'a new secure Veil message'}.<br/><br/>
-                  Authenticate to read {notifications.length > 1 ? 'them' : 'it'}.
+                  You have {signals.length > 1 ? 'new secure Veil messages' : 'a new secure Veil message'}.<br/><br/>
+                  Authenticate to read {signals.length > 1 ? 'them' : 'it'}.
                 </p>
               </div>
 

@@ -30,7 +30,7 @@ const MODES: { value: ScreenTimerMode; label: string; desc: string; color: strin
   {
     value: 'reminder',
     label: 'Reminder',
-    desc: 'Get a notification — app stays open',
+    desc: 'Get a signal — app stays open',
     color: 'text-yellow-400',
     icon: <Bell className="w-5 h-5" />,
   },

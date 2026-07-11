@@ -9,7 +9,7 @@ export function BottomTabs() {
   const tabs = [
     { name: 'Pulse', path: '/', icon: Home },
     { name: 'Discover', path: '/discover', icon: Compass },
-    { name: 'Orbit', path: '/nearby', icon: Orbit },
+    { name: 'Orbit', path: '/orbit', icon: Orbit },
     { name: 'Vibes', path: '/vibes', icon: PlaySquare },
     { name: 'Connect', path: '/connect', icon: MessageCircle },
     { name: 'Calendar', path: '/calendar', icon: CalendarHeart },

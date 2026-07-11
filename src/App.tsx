@@ -43,9 +43,9 @@ import WorldDetailScreen from "./screens/WorldDetailScreen";
 import { WorldCategoryScreen } from "./screens/WorldCategoryScreen";
 import MonetizationSetupScreen from "./screens/MonetizationSetupScreen";
 import DiscoverScreen from "./screens/DiscoverScreen";
-import NearbyScreen from "./screens/NearbyScreen";
+import OrbitScreen from "./screens/OrbitScreen";
 import { WorldActivityScreen } from "./screens/WorldActivityScreen";
-import { WorldNotificationSettingsScreen } from "./screens/WorldNotificationSettingsScreen";
+import { WorldSignalSettingsScreen } from "./screens/WorldSignalSettingsScreen";
 import IdentityScreen from "./screens/IdentityScreen";
 import SignalScreen from "./screens/SignalScreen";
 import BooksScreen from "./screens/BooksScreen";
@@ -85,11 +85,11 @@ if (typeof window !== "undefined" && !onlineSetupDone) {
   initMockUsersOnlineToggle();
 }
 
-import { useNotificationStore } from "./store/notificationStore";
+import { useSignalStore } from "./store/signalStore";
 import { useNavigate } from "react-router-dom";
 
 function PulseToastManager() {
-  const { pulseToasts, removePulseToast } = useNotificationStore();
+  const { pulseToasts, removePulseToast } = useSignalStore();
   const navigate = useNavigate();
 
   if (pulseToasts.length === 0) return null;
@@ -148,11 +148,11 @@ import VideoCallScreen from "./components/VideoCallScreen";
 import CoinWalletScreen from "./screens/CoinWalletScreen";
 import SocialCalendarScreen from "./screens/SocialCalendarScreen";
 import { VeilCurtain } from "./components/VeilCurtain";
-import { VeilNotificationManager } from "./components/VeilNotificationManager";
+import { VeilSignalManager } from "./components/VeilSignalManager";
 import { StealthManager } from "./components/StealthManager";
 import { VoiceRoom } from "./components/VoiceRoom";
 import { MinimizedRoomBar } from "./components/MinimizedRoomBar";
-import { WorldNotificationBanner } from "./components/WorldNotificationBanner";
+import { WorldSignalBanner } from "./components/WorldSignalBanner";
 import { CallErrorBanner } from "./components/CallErrorBanner";
 
 function AppContent() {
@@ -178,7 +178,7 @@ function AppContent() {
 
   return (
     <div className="w-full h-full relative">
-      <WorldNotificationBanner />
+      <WorldSignalBanner />
       <CallErrorBanner />
       <PulseToastManager />
       <StealthManager />
@@ -187,13 +187,13 @@ function AppContent() {
       <VoiceRoom />
       <MinimizedRoomBar />
       <VeilCurtain />
-      <VeilNotificationManager />
+      <VeilSignalManager />
 
       <RouteErrorBoundary key={location.pathname}>
         <Routes>
         <Route path="/" element={<PulseScreen />} />
         <Route path="/discover" element={<DiscoverScreen />} />
-        <Route path="/nearby" element={<NearbyScreen />} />
+        <Route path="/orbit" element={<OrbitScreen />} />
         <Route path="/worlds" element={<WorldsScreen />} />
         <Route path="/worlds/activity" element={<WorldActivityScreen />} />
         <Route
@@ -202,8 +202,8 @@ function AppContent() {
         />
         <Route path="/world/:id" element={<WorldDetailScreen />} />
         <Route
-          path="/world/:id/notifications"
-          element={<WorldNotificationSettingsScreen />}
+          path="/world/:id/signals"
+          element={<WorldSignalSettingsScreen />}
         />
         <Route
           path="/world/:id/monetize"

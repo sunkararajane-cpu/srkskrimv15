@@ -2,7 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { simulateCreatorPost, simulateVibeLike, simulateVibeComment, scheduleGrindReminder, showGrindNotification, checkGrindRisk, simulatePulseReward, simulateLanguageMatchNotification } from './store/notificationStore';
+import { simulateCreatorPost, simulateVibeLike, simulateVibeComment, scheduleGrindReminder, showGrindSignal, checkGrindRisk, simulatePulseReward, simulateLanguageMatchSignal } from './store/signalStore';
 import { mockUsers, mockReels } from './lib/mock/mockData';
 import { loadConfig } from './lib/runtimeConfig';
 
@@ -26,7 +26,7 @@ if ('serviceWorker' in navigator) {
             setTimeout(() => {
               const { atRisk, grindCount } = checkGrindRisk();
               if (atRisk) {
-                showGrindNotification(grindCount);
+                showGrindSignal(grindCount);
               }
             }, delay);
           }
@@ -48,11 +48,11 @@ window.simulateVibeLike = (likes = 0) => simulateVibeLike(mockUsers[0], mockReel
 // @ts-ignore
 window.simulateVibeComment = (reply = false) => simulateVibeComment(mockUsers[0], { id: 'c1', text: "this vibe is \uD83D\uDD25\uD83D\uDD25\uD83D\uDD25" }, mockReels[0], reply);
 // @ts-ignore
-window.simulateGrindReminder = (count = 5) => showGrindNotification(count);
+window.simulateGrindReminder = (count = 5) => showGrindSignal(count);
 // @ts-ignore
 window.simulatePulseReward = (event = 'milestone_20') => simulatePulseReward(event as any);
 // @ts-ignore
-window.simulateLanguageMatch = (langs = ['te', 'en'], count = 15, force = true) => simulateLanguageMatchNotification(langs, count, force);
+window.simulateLanguageMatch = (langs = ['te', 'en'], count = 15, force = true) => simulateLanguageMatchSignal(langs, count, force);
 
 const container = document.getElementById('root')!;
 const root = createRoot(container);

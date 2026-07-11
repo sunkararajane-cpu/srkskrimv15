@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 
 // MOCK INITIAL DATA
 export const INITIAL_COMMUNITIES = [
@@ -227,7 +227,7 @@ export function approveJoinRequest(worldId: string, requesterId: string) {
 
     // Let the requester know their request went through.
     const world = getCommunities().find((c) => c.id === worldId);
-    useNotificationStore.getState().addNotification({
+    useSignalStore.getState().addSignal({
       type: 'world_join',
       user: world?.name || 'World Admin',
       avatar: '',
@@ -260,7 +260,7 @@ export function denyJoinRequest(worldId: string, requesterId: string) {
 
   if (requesterId === 'currentUser') {
     const world = getCommunities().find((c) => c.id === worldId);
-    useNotificationStore.getState().addNotification({
+    useSignalStore.getState().addSignal({
       type: 'world_join',
       user: world?.name || 'World Admin',
       avatar: '',

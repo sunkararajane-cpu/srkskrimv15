@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type NotificationType =
+export type SignalType =
   | "voice_room"
   | "announcement"
   | "spark_milestone"
@@ -10,9 +10,9 @@ export type NotificationType =
   | "world_event"
   | "comment_reply";
 
-export interface WorldNotification {
+export interface WorldSignal {
   id: string;
-  type: NotificationType;
+  type: SignalType;
   communityId: string;
   communityName: string;
   atmosphere: string;
@@ -31,27 +31,27 @@ export interface WorldNotification {
 
 export interface BannerInfo {
   id: string;
-  notification: WorldNotification;
+  signal: WorldSignal;
   duration: number; // in ms
 }
 
-interface WorldNotificationState {
-  notifications: WorldNotification[];
+interface WorldSignalState {
+  signals: WorldSignal[];
   activeBanner: BannerInfo | null;
   hasUnseen: boolean;
-  addNotification: (
-    n: Omit<WorldNotification, "id" | "read" | "timestamp"> & {
+  addSignal: (
+    n: Omit<WorldSignal, "id" | "read" | "timestamp"> & {
       duration?: number;
     },
   ) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
-  deleteNotification: (id: string) => void;
+  deleteSignal: (id: string) => void;
   clearBanner: () => void;
   clearUnseen: () => void;
 }
 
-const INITIAL_NOTIFS: WorldNotification[] = [
+const INITIAL_NOTIFS: WorldSignal[] = [
   {
     id: "wn_001",
     type: "voice_room",
@@ -129,13 +129,13 @@ const INITIAL_NOTIFS: WorldNotification[] = [
   },
 ];
 
-export const useWorldNotificationStore = create<WorldNotificationState>(
+export const useWorldSignalStore = create<WorldSignalState>(
   (set, get) => ({
-    notifications: INITIAL_NOTIFS,
+    signals: INITIAL_NOTIFS,
     activeBanner: null,
     hasUnseen: INITIAL_NOTIFS.some((n) => !n.read),
-    addNotification: (n) => {
-      const newNotif: WorldNotification = {
+    addSignal: (n) => {
+      const newNotif: WorldSignal = {
         ...n,
         id: `wn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         read: false,
@@ -143,29 +143,29 @@ export const useWorldNotificationStore = create<WorldNotificationState>(
       };
 
       set((state) => ({
-        notifications: [newNotif, ...state.notifications],
+        signals: [newNotif, ...state.signals],
         hasUnseen: true,
         activeBanner: {
           id: newNotif.id,
-          notification: newNotif,
+          signal: newNotif,
           duration: n.duration || (n.type === "voice_room" ? 6000 : 4000),
         },
       }));
     },
     markAsRead: (id) =>
       set((state) => ({
-        notifications: state.notifications.map((n) =>
+        signals: state.signals.map((n) =>
           n.id === id ? { ...n, read: true } : n,
         ),
       })),
     markAllAsRead: () =>
       set((state) => ({
-        notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        signals: state.signals.map((n) => ({ ...n, read: true })),
         hasUnseen: false,
       })),
-    deleteNotification: (id) =>
+    deleteSignal: (id) =>
       set((state) => ({
-        notifications: state.notifications.filter((n) => n.id !== id),
+        signals: state.signals.filter((n) => n.id !== id),
       })),
     clearBanner: () => set({ activeBanner: null }),
     clearUnseen: () => set({ hasUnseen: false }),

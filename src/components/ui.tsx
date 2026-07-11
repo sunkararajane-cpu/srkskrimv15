@@ -3,7 +3,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { isFollowing, followUser, unfollowUser } from '../lib/mock/mockSocialGraph';
 import { useAchievements } from '../lib/mock/achievementEngine';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 
 export function cn(...inputs: ClassValue[]) {
 
@@ -90,7 +90,7 @@ export function FollowButton({ username, initialCount = 0, variant = 'default', 
       unfollowUser(username, initialCount);
     } else {
       followUser(username, initialCount);
-      useNotificationStore.getState().requestPushPermission();
+      useSignalStore.getState().requestPushPermission();
     }
   };
 

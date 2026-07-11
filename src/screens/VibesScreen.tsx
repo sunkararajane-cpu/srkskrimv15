@@ -17,7 +17,7 @@ import { MusicPicker, CURATED_TRACKS } from '../components/MusicPicker';
 import { useSavedStore } from '../store/savedStore';
 import { ReactionRow } from '../components/ReactionRow';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 import { useFollowStatus, followUser, unfollowUser } from '../lib/mock/mockSocialGraph';
 import { SKRIM_REACTIONS } from '../lib/mock/mockData';
 import { triggerReactionAnimation } from '../lib/animations/reactionAnimations';
@@ -357,8 +357,8 @@ function VibeCard({
         repostsList.unshift(repost);
         localStorage.setItem('skrimchat_reposts', JSON.stringify(repostsList));
 
-        // Add real notification for Vibe reshare
-        useNotificationStore.getState().addNotification({
+        // Add real signal for Vibe reshare
+        useSignalStore.getState().addSignal({
           type: 'new_vibe',
           user: displayUser,
           avatar: displayAvatar,
@@ -436,8 +436,8 @@ function VibeCard({
       cc[vibe.id] = (cc[vibe.id] || vibe.comments) + 1;
       localStorage.setItem('skrimchat_vibe_comments', JSON.stringify(cc));
 
-      // Trigger notification for vibe comment
-      useNotificationStore.getState().addNotification({
+      // Trigger signal for vibe comment
+      useSignalStore.getState().addSignal({
         type: 'vibe_comment',
         user: displayUser,
         avatar: displayAvatar,
@@ -501,9 +501,9 @@ function VibeCard({
           triggerReactionAnimation(el, reaction.id, reaction.emoji);
         }
 
-        // Trigger reaction notification
+        // Trigger reaction signal
         if (reaction) {
-          useNotificationStore.getState().addNotification({
+          useSignalStore.getState().addSignal({
             type: 'vibe_like',
             user: displayUser,
             avatar: displayAvatar,
@@ -864,8 +864,8 @@ function VibeCard({
         incrementStat('reactionsSent', 1);
         incrementStat('pulseScore', 3);
 
-        // Trigger vibe like notification
-        useNotificationStore.getState().addNotification({
+        // Trigger vibe like signal
+        useSignalStore.getState().addSignal({
           type: 'vibe_like',
           user: displayUser,
           avatar: displayAvatar,
@@ -991,8 +991,8 @@ function VibeCard({
         incrementStat('reactionsSent', 1);
         incrementStat('pulseScore', 3);
 
-        // Trigger vibe like notification
-        useNotificationStore.getState().addNotification({
+        // Trigger vibe like signal
+        useSignalStore.getState().addSignal({
           type: 'vibe_like',
           user: displayUser,
           avatar: displayAvatar,
@@ -1098,7 +1098,7 @@ function VibeCard({
             <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[#00F0FF]/40 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#B026FF]/40 to-transparent" />
 
-            {/* Toast Notification Container inside Frame */}
+            {/* Toast Signal Container inside Frame */}
             <AnimatePresence>
               {toastMessage && (
                 <motion.div 
@@ -1368,7 +1368,7 @@ function VibeCard({
                   setLiked(l => {
                     const next = !l;
                     if (next) {
-                      useNotificationStore.getState().addNotification({
+                      useSignalStore.getState().addSignal({
                         type: 'vibe_like',
                         user: displayUser,
                         avatar: displayAvatar,
@@ -1650,7 +1650,7 @@ function VibeCard({
               setLiked(l => {
                 const next = !l;
                 if (next) {
-                  useNotificationStore.getState().addNotification({
+                  useSignalStore.getState().addSignal({
                     type: 'vibe_like',
                     user: displayUser,
                     avatar: displayAvatar,
@@ -2688,7 +2688,7 @@ export default function VibesScreen() {
 
   // Filter → seed offset so each tab produces different content
   const filterSeedOffset: Record<string, number> = {
-    foryou: 0, following: 500, trending: 1000, new: 1500, nearby: 2000, myvibes: 3000,
+    foryou: 0, following: 500, trending: 1000, new: 1500, orbit: 2000, myvibes: 3000,
   };
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2786,7 +2786,7 @@ export default function VibesScreen() {
       following: Math.floor(Math.random() * 50) * 10,
       trending: Math.floor(Math.random() * 50) * 10,
       new: Math.floor(Math.random() * 50) * 10,
-      nearby: Math.floor(Math.random() * 50) * 10,
+      orbit: Math.floor(Math.random() * 50) * 10,
     };
   });
 
@@ -2848,7 +2848,7 @@ export default function VibesScreen() {
       const rOffset = refreshOffsets[activeFilter] ?? 0;
       const offset = baseOffset + rOffset;
 
-      // For "trending" sort by score desc already; "new" = reverse freshness; "following"/"nearby" = seeded different set
+      // For "trending" sort by score desc already; "new" = reverse freshness; "following"/"orbit" = seeded different set
       let initial = assembleVibesFeed(mood, offset, 12);
 
       // Filter out reshared vibes from userVibes and sessionUserVibes unless we are in 'myvibes'
@@ -3004,7 +3004,7 @@ export default function VibesScreen() {
     { id: 'following',label: '💜 Following' },
     { id: 'trending', label: '🔥 Trending' },
     { id: 'new',      label: '✨ Fresh' },
-    { id: 'nearby',   label: '📍 Nearby' },
+    { id: 'orbit',   label: '📍 Orbit' },
     { id: 'myvibes',  label: '👤 My Vibes' },
   ];
 
@@ -3139,7 +3139,7 @@ export default function VibesScreen() {
 
   return (
     <div ref={containerRef} className="relative w-full h-full min-h-[500px] bg-black overflow-hidden flex flex-col">
-      {/* Toast Notification Container inside Frame */}
+      {/* Toast Signal Container inside Frame */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div 

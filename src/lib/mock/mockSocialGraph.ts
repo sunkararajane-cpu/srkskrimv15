@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { mockUsers } from './mockData';
-import { useNotificationStore } from '../../store/notificationStore';
+import { useSignalStore } from '../../store/signalStore';
 
 export function getMessageRequests(): any[] {
   const data = localStorage.getItem('skrimchat_msg_requests');
@@ -146,8 +146,8 @@ export function followUser(targetUsername: string, initialFollowers: number = 0)
     const displayName = userObj?.displayName || targetUsername.replace('@', '');
     const avatar = userObj?.avatar || `https://i.pravatar.cc/150?u=${targetUsername}`;
 
-    // Add real notification
-    useNotificationStore.getState().addNotification({
+    // Add real signal
+    useSignalStore.getState().addSignal({
       type: 'follow',
       user: displayName,
       avatar: avatar,

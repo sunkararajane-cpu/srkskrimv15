@@ -41,8 +41,8 @@ export function StealthAvatar({ onClick, className = "w-8 h-8 rounded-full borde
   };
 
   const getBadgeStyle = () => {
-    const notifications = JSON.parse(localStorage.getItem('veil_notifications') || '[]');
-    return localStorage.getItem("veil_stealth_enabled") === "true" && notifications.length > 0;
+    const signals = JSON.parse(localStorage.getItem('veil_signals') || '[]');
+    return localStorage.getItem("veil_stealth_enabled") === "true" && signals.length > 0;
   }
 
   const [hasBadge, setHasBadge] = React.useState(getBadgeStyle());

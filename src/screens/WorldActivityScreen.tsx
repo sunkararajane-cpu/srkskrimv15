@@ -15,21 +15,21 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  useWorldNotificationStore,
-  WorldNotification,
-} from "../store/worldNotificationStore";
+  useWorldSignalStore,
+  WorldSignal,
+} from "../store/worldSignalStore";
 import { useWorldMembership, useWorlds } from "../hooks/useWorldMembership";
 
 export function WorldActivityScreen() {
   const navigate = useNavigate();
   const {
-    notifications,
+    signals,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    addNotification,
+    deleteSignal,
+    addSignal,
     clearUnseen,
-  } = useWorldNotificationStore();
+  } = useWorldSignalStore();
   const worlds = useWorlds();
 
   const [activeTab, setActiveTab] = useState<string>("All");
@@ -40,16 +40,16 @@ export function WorldActivityScreen() {
     clearUnseen();
   }, [clearUnseen]);
 
-  // Grouping notifications by date
+  // Grouping signals by date
   // For mock purpose we simplify date handling
-  const todayNotifs = notifications.filter(
+  const todayNotifs = signals.filter(
     (n) => n.timestamp >= Date.now() - 24 * 60 * 60000,
   );
-  const olderNotifs = notifications.filter(
+  const olderNotifs = signals.filter(
     (n) => n.timestamp < Date.now() - 24 * 60 * 60000,
   );
 
-  const filterNotifs = (list: WorldNotification[]) => {
+  const filterNotifs = (list: WorldSignal[]) => {
     if (activeTab === "All") return list;
     return list.filter((n) => n.communityName === activeTab);
   };
@@ -126,7 +126,7 @@ export function WorldActivityScreen() {
   const simulateNotif = (type: string) => {
     setShowMenu(false);
     if (type === "voice_room") {
-      addNotification({
+      addSignal({
         type: "voice_room",
         communityId: "c001",
         communityName: "SkrimGamers",
@@ -138,7 +138,7 @@ export function WorldActivityScreen() {
         time: "Just now",
       });
     } else if (type === "announcement") {
-      addNotification({
+      addSignal({
         type: "announcement",
         communityId: "c002",
         communityName: "GrindMode",
@@ -148,7 +148,7 @@ export function WorldActivityScreen() {
         time: "Just now",
       });
     } else if (type === "spark_milestone") {
-      addNotification({
+      addSignal({
         type: "spark_milestone",
         communityId: "c001",
         communityName: "SkrimGamers",
@@ -159,7 +159,7 @@ export function WorldActivityScreen() {
         time: "Just now",
       });
     } else if (type === "achievement") {
-      addNotification({
+      addSignal({
         type: "achievement",
         communityId: "c003",
         communityName: "ArtisanAlley",
@@ -172,7 +172,7 @@ export function WorldActivityScreen() {
     }
   };
 
-  const handleAction = (n: WorldNotification) => {
+  const handleAction = (n: WorldSignal) => {
     markAsRead(n.id);
     if (n.type === "voice_room") {
       // open voice room
@@ -182,7 +182,7 @@ export function WorldActivityScreen() {
     }
   };
 
-  const renderNotifRow = (n: WorldNotification) => {
+  const renderNotifRow = (n: WorldSignal) => {
     const isSwiped = swipedItem === n.id;
     const color = getAtmColor(n.atmosphere);
 
@@ -200,7 +200,7 @@ export function WorldActivityScreen() {
             Read
           </button>
           <button
-            onClick={() => deleteNotification(n.id)}
+            onClick={() => deleteSignal(n.id)}
             className="w-16 h-full flex items-center justify-center text-white bg-red-600 font-bold text-xs"
           >
             Delete

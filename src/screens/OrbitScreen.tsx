@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings2, Users, Sparkles, ShieldAlert, Eye, X, Mic, MicOff, LogIn, MapPin, MapPinOff } from 'lucide-react';
-import { useNearby } from '../hooks/useNearby';
-import { NearbyUserCard } from '../components/nearby/NearbyUserCard';
-import { IcebreakerSheet } from '../components/nearby/IcebreakerSheet';
-import { NearbySettingsSheet } from '../components/nearby/NearbySettingsSheet';
-import { NearbyUser, MOOD_META, mockActivityRooms, mockNearbyEvents, IcebreakerType, ActivityRoom } from '../lib/mock/mockNearby';
+import { useOrbit } from '../hooks/useOrbit';
+import { OrbitUserCard } from '../components/orbit/OrbitUserCard';
+import { IcebreakerSheet } from '../components/orbit/IcebreakerSheet';
+import { OrbitSettingsSheet } from '../components/orbit/OrbitSettingsSheet';
+import { OrbitUser, MOOD_META, mockActivityRooms, mockOrbitEvents, IcebreakerType, ActivityRoom } from '../lib/mock/mockOrbit';
 import { useVoiceRoomStore, VoiceRoomData } from '../store/voiceRoomStore';
 
-export default function NearbyScreen() {
+export default function OrbitScreen() {
   const navigate = useNavigate();
   const {
     settings,
@@ -21,9 +21,9 @@ export default function NearbyScreen() {
     dailyLimit,
     locationStatus,
     requestLocation,
-  } = useNearby();
+  } = useOrbit();
 
-  const [icebreakerUser, setIcebreakerUser] = useState<NearbyUser | null>(null);
+  const [icebreakerUser, setIcebreakerUser] = useState<OrbitUser | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [screenshotNotice, setScreenshotNotice] = useState<string | null>(null);
   const [activeRoomModal, setActiveRoomModal] = useState<ActivityRoom | null>(null);
@@ -32,7 +32,7 @@ export default function NearbyScreen() {
   const myMood = MOOD_META[settings.mood];
   const crossedPathsUsers = visibleUsers.filter((u) => u.crossedPathsToday);
 
-  const handleOpenProfile = (user: NearbyUser) => {
+  const handleOpenProfile = (user: OrbitUser) => {
     const status = requestStatusFor(user.id);
     if (status === 'accepted') {
       navigate(`/chat/${user.id}`);
@@ -46,7 +46,7 @@ export default function NearbyScreen() {
     const roomData: VoiceRoomData = {
       id: `room_${room.id}`,
       title: room.name,
-      community: 'Nearby',
+      community: 'Orbit',
       atmosphere: 'nebula',
       startedAt: Date.now() - 5 * 60 * 1000,
       isLive: true,
@@ -54,11 +54,11 @@ export default function NearbyScreen() {
       speakers: [
         { id: 's1', name: 'Host', initial: room.emoji, role: 'host', muted: false, speaking: false },
       ],
-      listeners: Array.from({ length: Math.min(room.nearbyCount - 1, 8) }, (_, i) => ({
+      listeners: Array.from({ length: Math.min(room.orbitCount - 1, 8) }, (_, i) => ({
         id: `l${i + 1}`,
         initial: String.fromCharCode(65 + i),
       })),
-      totalListeners: room.nearbyCount,
+      totalListeners: room.orbitCount,
     };
     setActiveRoom(roomData, 'pre-entry');
     setActiveRoomModal(null);
@@ -82,7 +82,7 @@ export default function NearbyScreen() {
       <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/5 shrink-0">
         <div>
           <h1 className="text-xl font-black text-glow-purple">Orbit</h1>
-          <p className="text-[11px] text-white/40">People nearby, by interest — not followers</p>
+          <p className="text-[11px] text-white/40">People orbit, by interest — not followers</p>
         </div>
         <div className="flex items-center gap-2">
           <span
@@ -94,7 +94,7 @@ export default function NearbyScreen() {
           <button
             onClick={() => setSettingsOpen(true)}
             className="p-2 rounded-full glass-panel"
-            aria-label="Nearby settings"
+            aria-label="Orbit settings"
           >
             <Settings2 className="w-4 h-4 text-white/70" />
           </button>
@@ -147,11 +147,11 @@ export default function NearbyScreen() {
           </p>
         </div>
 
-        {/* Nearby events */}
-        {mockNearbyEvents.length > 0 && (
+        {/* Orbit events */}
+        {mockOrbitEvents.length > 0 && (
           <div className="px-4 mb-4">
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
-              {mockNearbyEvents.map((evt) => (
+              {mockOrbitEvents.map((evt) => (
                 <div
                   key={evt.id}
                   className="glass-panel rounded-2xl p-3 min-w-[200px] shrink-0 flex flex-col gap-1.5"
@@ -192,7 +192,7 @@ export default function NearbyScreen() {
               >
                 <p className="text-lg">{room.emoji}</p>
                 <p className="text-xs font-bold truncate">{room.name}</p>
-                <p className="text-[10px] text-white/40">{room.nearbyCount} nearby</p>
+                <p className="text-[10px] text-white/40">{room.orbitCount} orbit</p>
               </button>
             ))}
           </div>
@@ -215,10 +215,10 @@ export default function NearbyScreen() {
           </div>
         )}
 
-        {/* Nearby people list */}
+        {/* Orbit people list */}
         <div className="px-4">
           <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-2">
-            Nearby People
+            Orbit People
           </p>
           <div className="flex flex-col gap-2">
             {visibleUsers.length === 0 ? (
@@ -234,7 +234,7 @@ export default function NearbyScreen() {
                     if (Math.random() < 0.08) simulateScreenshotNotice(user.nickname);
                   }}
                 >
-                  <NearbyUserCard
+                  <OrbitUserCard
                     user={user}
                     status={requestStatusFor(user.id)}
                     onOpenIcebreaker={setIcebreakerUser}
@@ -254,7 +254,7 @@ export default function NearbyScreen() {
         requestsRemaining={requestsRemaining}
       />
 
-      <NearbySettingsSheet
+      <OrbitSettingsSheet
         open={settingsOpen}
         settings={settings}
         onClose={() => setSettingsOpen(false)}
@@ -273,7 +273,7 @@ export default function NearbyScreen() {
                 <span className="text-3xl">{activeRoomModal.emoji}</span>
                 <div>
                   <p className="font-black text-lg text-white">{activeRoomModal.name}</p>
-                  <p className="text-[11px] text-white/40">{activeRoomModal.nearbyCount} people nearby in this room</p>
+                  <p className="text-[11px] text-white/40">{activeRoomModal.orbitCount} people orbit in this room</p>
                 </div>
               </div>
               <button onClick={() => setActiveRoomModal(null)} className="p-2 rounded-full glass-panel">
@@ -282,7 +282,7 @@ export default function NearbyScreen() {
             </div>
             <div className="flex items-center gap-2 text-xs text-white/50 glass-panel rounded-xl px-3 py-2">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
-              Live voice room · Anyone nearby can join
+              Live voice room · Anyone orbit can join
             </div>
             <div className="flex gap-3">
               <button

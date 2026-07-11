@@ -1,8 +1,8 @@
-// Lightweight "AI compatibility" scorer for the Nearby feature.
+// Lightweight "AI compatibility" scorer for the Orbit feature.
 // Mock logic: weighted overlap of interests + small mood-affinity bonus,
 // deterministic per user pair so the UI doesn't flicker on re-render.
 
-import { NearbyUser, MoodStatus } from './mock/mockNearby';
+import { OrbitUser, MoodStatus } from './mock/mockOrbit';
 
 const MOOD_AFFINITY: Record<MoodStatus, MoodStatus[]> = {
   want_to_chat: ['want_to_chat', 'looking_for_friends'],
@@ -12,7 +12,7 @@ const MOOD_AFFINITY: Record<MoodStatus, MoodStatus[]> = {
   invisible: [],
 };
 
-export function getCompatibility(myInterests: string[], myMood: MoodStatus, user: NearbyUser): {
+export function getCompatibility(myInterests: string[], myMood: MoodStatus, user: OrbitUser): {
   score: number;
   sharedInterests: string[];
 } {

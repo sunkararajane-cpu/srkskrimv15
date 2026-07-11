@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Gift, Heart, Calendar, Bell, BellOff, Trash2, Edit2, Check, X, ChevronRight, Cake, Star } from 'lucide-react';
 import { mockUsers } from '../lib/mock/mockData';
-import { simulatePulseReward } from '../store/notificationStore';
+import { simulatePulseReward } from '../store/signalStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -282,7 +282,7 @@ function EditModal({ event, onSave, onClose }: EditModalProps) {
 
         {/* Notify toggle */}
         <div className="flex items-center justify-between mb-6">
-          <span className="text-white/70 text-sm">Push notification</span>
+          <span className="text-white/70 text-sm">Push signal</span>
           <button
             onClick={() => setNotifyEnabled(v => !v)}
             className={`w-12 h-6 rounded-full transition-colors relative ${notifyEnabled ? 'bg-purple-500' : 'bg-white/10'}`}

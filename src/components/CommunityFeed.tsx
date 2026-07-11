@@ -17,7 +17,7 @@ import {
   Image as ImageIcon,
   Video as VideoIcon,
 } from "lucide-react";
-import { useNotificationStore } from "../store/notificationStore";
+import { useSignalStore } from "../store/signalStore";
 
 // MOCK FEED DATA
 const INITIAL_FEED: any[] = [
@@ -180,7 +180,7 @@ export function CommunityFeed({
     } catch {}
   }, [posts, world.id]);
 
-  // World admin action → Signal notification. Announcement posts made by an
+  // World admin action → Signal signal. Announcement posts made by an
   // admin other than the current user (e.g. the seeded "SkrimAdmin") are a
   // real admin action a member would want to know about, so notify once per
   // post the first time a joined member sees it. Guarded by a per-world "already
@@ -204,7 +204,7 @@ export function CommunityFeed({
     if (newAdminPosts.length === 0) return;
 
     newAdminPosts.forEach((p) => {
-      useNotificationStore.getState().addNotification({
+      useSignalStore.getState().addSignal({
         type: "world_admin",
         user: world.name || p.author,
         avatar: "",

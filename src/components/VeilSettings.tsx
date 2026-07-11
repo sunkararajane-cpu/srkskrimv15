@@ -1,21 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Shield, Trash2, CheckCircle, Clock, Lock, X } from 'lucide-react';
-import { VeilNotification } from './VeilNotificationManager';
+import { VeilSignal } from './VeilSignalManager';
 
 interface VeilSettingsProps {
   onClose: () => void;
 }
 
 export function VeilSettings({ onClose }: VeilSettingsProps) {
-  const [activeScreen, setActiveScreen] = useState<'main' | 'change_pin' | 'decoy_pin' | 'notification_history' | 'clear_data'>('main');
+  const [activeScreen, setActiveScreen] = useState<'main' | 'change_pin' | 'decoy_pin' | 'signal_history' | 'clear_data'>('main');
 
   const [settings, setSettings] = useState(() => {
     const defaultSettings = {
       security: { realPin: "111111", decoyPin: "000000", decoyEnabled: false, biometricEnabled: true },
       autoLock: { onBackground: true, onTabSwitch: true, inactivityMinutes: 5 },
       messages: { defaultDestructTimer: null as string | null, autoCloakOnEntry: false, cloakNewMessages: false, autoRecloakSeconds: 10 },
-      notifications: { bannersEnabled: true, silentMode: false }
+      signals: { bannersEnabled: true, silentMode: false }
     };
     const s = localStorage.getItem('veil_settings');
     if (s) {
@@ -25,7 +25,7 @@ export function VeilSettings({ onClose }: VeilSettingsProps) {
           security: { ...defaultSettings.security, ...(parsed.security || {}) },
           autoLock: { ...defaultSettings.autoLock, ...(parsed.autoLock || {}) },
           messages: { ...defaultSettings.messages, ...(parsed.messages || {}) },
-          notifications: { ...defaultSettings.notifications, ...(parsed.notifications || {}), silentMode: parsed.silentMode ?? defaultSettings.notifications.silentMode }
+          signals: { ...defaultSettings.signals, ...(parsed.signals || {}), silentMode: parsed.silentMode ?? defaultSettings.signals.silentMode }
         };
       } catch (e) {
         return defaultSettings;
@@ -61,7 +61,7 @@ export function VeilSettings({ onClose }: VeilSettingsProps) {
                  updateSetting={updateSetting} 
                  onClose={() => setActiveScreen('main')} 
                />,
-    notification_history: <NotificationHistoryScreen 
+    signal_history: <SignalHistoryScreen 
                             onClose={() => setActiveScreen('main')} 
                           />,
     clear_data: <ClearDataScreen 
@@ -187,17 +187,17 @@ function MainSettingsScreen({ settings, updateSetting, onClose, openScreen, open
         <ToggleRow label="Cloak new messages" value={settings.messages.cloakNewMessages} onChange={(v) => updateSetting('messages', 'cloakNewMessages', v)} />
         <Row label="Auto-recloak timer" right={<Value label={settings.messages.autoRecloakSeconds ? `${settings.messages.autoRecloakSeconds}s` : 'OFF'} />} onClick={() => openSheet('recloak')} />
 
-        {/* NOTIFICATIONS */}
-        <SectionHeader title="N O T I F I C A T I O N S" />
-        <ToggleRow label="Notification banners" value={settings.notifications.bannersEnabled} onChange={(v) => updateSetting('notifications', 'bannersEnabled', v)} />
-        <ToggleRow label="Silent mode" value={settings.notifications.silentMode} onChange={(v) => {
-          updateSetting('notifications', 'silentMode', v);
+        {/* SIGNALS */}
+        <SectionHeader title="S I G N A L S" />
+        <ToggleRow label="Signal banners" value={settings.signals.bannersEnabled} onChange={(v) => updateSetting('signals', 'bannersEnabled', v)} />
+        <ToggleRow label="Silent mode" value={settings.signals.silentMode} onChange={(v) => {
+          updateSetting('signals', 'silentMode', v);
           // Sync with the event logic using same settings key
           const s = JSON.parse(localStorage.getItem('veil_settings') || '{}');
           s.silentMode = v;
           localStorage.setItem('veil_settings', JSON.stringify(s));
         }} />
-        <Row label="Notification history" right={<Chevron />} onClick={() => openScreen('notification_history')} />
+        <Row label="Signal history" right={<Chevron />} onClick={() => openScreen('signal_history')} />
 
         {/* PRIVACY SHIELD */}
         <SectionHeader title="P R I V A C Y   S H I E L D" />
@@ -470,11 +470,11 @@ function DecoyPinScreen({ settings, updateSetting, onClose }: any) {
   );
 }
 
-function NotificationHistoryScreen({ onClose }: any) {
-  const [history, setHistory] = useState<VeilNotification[]>([]);
+function SignalHistoryScreen({ onClose }: any) {
+  const [history, setHistory] = useState<VeilSignal[]>([]);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('veil_notifications_history') || '[]');
+    const stored = JSON.parse(localStorage.getItem('veil_signals_history') || '[]');
     setHistory(stored);
   }, []);
 
@@ -492,11 +492,11 @@ function NotificationHistoryScreen({ onClose }: any) {
           <button onClick={onClose} className="p-2 -ml-2 text-white/70 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-white text-[15px] font-medium tracking-wide uppercase">Notification History</h1>
+          <h1 className="text-white text-[15px] font-medium tracking-wide uppercase">Signal History</h1>
         </div>
         <button onClick={() => {
           setHistory([]);
-          localStorage.removeItem('veil_notifications_history');
+          localStorage.removeItem('veil_signals_history');
         }} className="p-2 -mr-2 text-[#888899] hover:text-[#FF3B3B] transition-colors">
           <Trash2 size={18} />
         </button>
@@ -540,8 +540,8 @@ function ClearDataScreen({ onClose }: any) {
          // Reset app somehow - just clearing local storage
          localStorage.removeItem('veil_auth_temp');
          localStorage.removeItem('veil_settings');
-         localStorage.removeItem('veil_notifications');
-         localStorage.removeItem('veil_notifications_history');
+         localStorage.removeItem('veil_signals');
+         localStorage.removeItem('veil_signals_history');
          window.location.reload();
       }, 5000);
     }
@@ -623,7 +623,7 @@ function ClearDataScreen({ onClose }: any) {
           <li>🔥 Your Veil PIN</li>
           <li>🔥 Your Decoy PIN</li>
           <li>🔥 All Veil settings</li>
-          <li>🔥 Notification history</li>
+          <li>🔥 Signal history</li>
         </ul>
         
         <p className="text-[#888899] text-[15px] mb-8 text-center">

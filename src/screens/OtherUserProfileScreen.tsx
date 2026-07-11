@@ -8,7 +8,7 @@ import { AvatarWithRing, FollowButton } from '../components/ui';
 import { ImmersivePostViewer } from '../components/ImmersivePostViewer';
 import { useSocialCounts, useFollowStatus, sendRequest, hasSentRequest, blockUser, unblockUser, muteUser, unmuteUser, isBlocked, isMuted, sortWithPinnedFirst, usePinnedPosts, getProfileLinks, getMutualFollowers, getPeopleAlsoFollow, isCloseFriend, toggleCloseFriend } from '../lib/mock/mockSocialGraph';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { useNotificationStore, simulateCreatorPost } from '../store/notificationStore';
+import { useSignalStore, simulateCreatorPost } from '../store/signalStore';
 import { MessageRequestSheet } from '../components/MessageRequestSheet';
 import { ShareProfileSheet } from '../components/ShareProfileSheet';
 import { StatBreakdownSheet } from '../components/StatBreakdownSheet';
@@ -60,9 +60,9 @@ export default function OtherUserProfileScreen() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeStatType, setActiveStatType] = useState<'pulse' | 'blaze' | 'views' | 'vibe' | null>(null);
 
-  const { creatorNotificationPrefs, toggleCreatorNotifications, globalVibeNotificationsEnabled } = useNotificationStore();
-  const isCreatorNotifEnabled = creatorNotificationPrefs[user.username] !== false; // default true
-  const showBell = followStatus.following && globalVibeNotificationsEnabled;
+  const { creatorSignalPrefs, toggleCreatorSignals, globalVibeSignalsEnabled } = useSignalStore();
+  const isCreatorNotifEnabled = creatorSignalPrefs[user.username] !== false; // default true
+  const showBell = followStatus.following && globalVibeSignalsEnabled;
 
   useEffect(() => {
     if (currentUser?.username && user?.username) {
@@ -130,8 +130,8 @@ export default function OtherUserProfileScreen() {
           {showBell && (
             <button 
               onClick={() => {
-                 toggleCreatorNotifications(user.username);
-                 handleShowToast(isCreatorNotifEnabled ? `Notifications muted for ${user.displayName}` : `Notifications enabled for ${user.displayName}`);
+                 toggleCreatorSignals(user.username);
+                 handleShowToast(isCreatorNotifEnabled ? `Signals muted for ${user.displayName}` : `Signals enabled for ${user.displayName}`);
               }} 
               className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition active:scale-95"
             >

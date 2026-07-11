@@ -7,7 +7,7 @@ import {
 import { AvatarWithRing } from './ui';
 import { getPostComments, addPostComment, PulseComment } from '../lib/mock/pulseComments';
 import { mockUsers } from '../lib/mock/mockData';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 import { containsFilteredKeyword, getPostModerationSettings } from '../lib/mock/mockSocialGraph';
 import { generateVideoThumbnail } from '../lib/services/thumbnailService';
 import { saveRecord, getAllRecords } from '../lib/services/mediaStorage';
@@ -257,7 +257,7 @@ export function PulseReshareSheet({
       localStorage.setItem('skrimchat_reposts', JSON.stringify(stored));
     } catch (e) {}
     if (post) {
-      useNotificationStore.getState().addNotification({
+      useSignalStore.getState().addSignal({
         type: 'pulse',
         user: post.user,
         avatar: post.avatar || 'https://i.pravatar.cc/150?u=system',

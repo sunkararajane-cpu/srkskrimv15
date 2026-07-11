@@ -12,7 +12,7 @@ import {
   Pause, Volume2, VolumeX, Users,
 } from 'lucide-react';
 import { likePost } from '../lib/mock/mockServices';
-import { useNotificationStore } from '../store/notificationStore';
+import { useSignalStore } from '../store/signalStore';
 import { getMutedUsers, getBlockedUsers, getPostModerationSettings, savePostModerationSettings } from '../lib/mock/mockSocialGraph';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
@@ -80,7 +80,7 @@ function fmt(n: number) {
 }
 
 // Resolves raw @handles (from caption text and/or photo tags) against
-// MOCK_USERS so a mention notification can carry a real display name and
+// MOCK_USERS so a mention signal can carry a real display name and
 // avatar. Dedupes by handle and drops the poster's own handle so posting
 // with your own @handle in the caption doesn't notify yourself.
 function resolveMentionedUsers(
@@ -109,8 +109,8 @@ function resolveMentionedUsers(
   return resolved;
 }
 
-// Fires one 'mention' notification per tagged/mentioned user for a freshly
-// published post, respecting the same addNotification() gating as every
+// Fires one 'mention' signal per tagged/mentioned user for a freshly
+// published post, respecting the same addSignal() gating as every
 // other trigger. Used for both caption @mentions and photo "tag people".
 function notifyMentionedUsers(
   postId: string,
@@ -123,7 +123,7 @@ function notifyMentionedUsers(
   const mentioned = resolveMentionedUsers([...textHandles, ...taggedHandles], currentUserHandle);
 
   mentioned.forEach((m) => {
-    useNotificationStore.getState().addNotification({
+    useSignalStore.getState().addSignal({
       type: 'mention',
       user: m.user,
       avatar: m.avatar,
@@ -3647,7 +3647,7 @@ export default function PulseScreen() {
       if (nowLiked) { 
         incrementStat('reactionsSent', 1); 
         incrementStat('pulseScore', 2); 
-        useNotificationStore.getState().addNotification({
+        useSignalStore.getState().addSignal({
           type: 'pulse',
           user: p.user,
           avatar: p.avatar || 'https://i.pravatar.cc/150?u=system',
@@ -3699,7 +3699,7 @@ export default function PulseScreen() {
         const el = document.getElementById(`pulse-image-${postId}`);
         if (el && reaction) triggerReactionAnimation(el, reaction.id, reaction.emoji);
         if (reaction) {
-          useNotificationStore.getState().addNotification({
+          useSignalStore.getState().addSignal({
             type: 'pulse',
             user: p.user,
             avatar: p.avatar || 'https://i.pravatar.cc/150?u=system',
@@ -3922,10 +3922,10 @@ export default function PulseScreen() {
               });
               localStorage.setItem('skrimchat_inapp_notifs', JSON.stringify(inApp));
 
-              // Also push through the real notification store so this
-              // respects the user's comment-notification preference and
-              // shows up consistently with every other Spark notification.
-              useNotificationStore.getState().addNotification({
+              // Also push through the real signal store so this
+              // respects the user's comment-signal preference and
+              // shows up consistently with every other Spark signal.
+              useSignalStore.getState().addSignal({
                 type: 'comment',
                 user: currentUser?.username || 'me',
                 avatar: currentUser?.avatar || '',
@@ -3934,7 +3934,7 @@ export default function PulseScreen() {
                 vibeId: spark.id,
               });
             } catch (e) {
-              console.error("Failed to save challenge notification:", e);
+              console.error("Failed to save challenge signal:", e);
             }
           }
 
@@ -4042,7 +4042,7 @@ export default function PulseScreen() {
           if (activeCommentsPostId) {
             const post = findPostById(posts, activeCommentsPostId);
             if (post) {
-              useNotificationStore.getState().addNotification({
+              useSignalStore.getState().addSignal({
                 type: 'comment',
                 user: post.user,
                 avatar: post.avatar || 'https://i.pravatar.cc/150?u=system',
