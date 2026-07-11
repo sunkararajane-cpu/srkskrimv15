@@ -2,8 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { simulateCreatorPost, simulateVibeLike, simulateVibeComment, scheduleGrindReminder, showGrindSignal, checkGrindRisk, simulatePulseReward, simulateLanguageMatchSignal } from './store/signalStore';
-import { mockUsers, mockReels } from './lib/mock/mockData';
+import { scheduleGrindReminder, showGrindSignal, checkGrindRisk, simulatePulseReward, simulateLanguageMatchSignal } from './store/signalStore';
 import { loadConfig } from './lib/runtimeConfig';
 
 if ('serviceWorker' in navigator) {
@@ -41,12 +40,6 @@ if ('serviceWorker' in navigator) {
 // Initial grind schedule setup
 scheduleGrindReminder();
 
-// @ts-ignore
-window.simulateCreatorPost = () => simulateCreatorPost(mockUsers[0], mockReels[0]);
-// @ts-ignore
-window.simulateVibeLike = (likes = 0) => simulateVibeLike(mockUsers[0], mockReels[0], likes);
-// @ts-ignore
-window.simulateVibeComment = (reply = false) => simulateVibeComment(mockUsers[0], { id: 'c1', text: "this vibe is \uD83D\uDD25\uD83D\uDD25\uD83D\uDD25" }, mockReels[0], reply);
 // @ts-ignore
 window.simulateGrindReminder = (count = 5) => showGrindSignal(count);
 // @ts-ignore

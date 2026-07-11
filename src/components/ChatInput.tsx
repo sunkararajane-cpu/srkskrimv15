@@ -45,6 +45,7 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
   const slowModeTimerRef = useRef<any>(null);
   
   const [isCheckingMic, setIsCheckingMic] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -101,33 +102,35 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
     }
     setIsCheckingMic(false);
 
+    if (!stream) {
+      setPermissionDenied(true);
+      setTimeout(() => setPermissionDenied(false), 4000);
+      return;
+    }
+
     setIsRecording(true);
     setIsRecordingLocked(false);
     setRecordingTime(0);
     setLiveWaveform(Array(20).fill(0.1));
     audioChunksRef.current = [];
 
-    if (stream) {
-      try {
-        const options = MediaRecorder.isTypeSupported('audio/webm') 
-          ? { mimeType: 'audio/webm' } 
-          : { mimeType: 'audio/ogg' };
-        
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
+    try {
+      const options = MediaRecorder.isTypeSupported('audio/webm') 
+        ? { mimeType: 'audio/webm' } 
+        : { mimeType: 'audio/ogg' };
+      
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
 
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data && event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
 
-        mediaRecorder.start(100);
-      } catch (err) {
-        console.warn("Could not start MediaRecorder:", err);
-        mediaRecorderRef.current = null;
-      }
-    } else {
+      mediaRecorder.start(100);
+    } catch (err) {
+      console.warn("Could not start MediaRecorder:", err);
       mediaRecorderRef.current = null;
     }
 
@@ -152,27 +155,43 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
     const actualDuration = Math.max(1, Math.floor((Date.now() - recordStartTime.current) / 1000));
 
     const mediaRecorder = mediaRecorderRef.current;
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.onstop = async () => {
+    if (mediaRecorder) {
+      // Instantly release the microphone tracks to turn off the hardware recording light
+      try {
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        console.warn("Could not stop audio tracks immediately:", err);
+      }
 
-        if (!cancel && actualDuration > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64Url = reader.result as string;
-            const realPeaks = await getAudioWaveformPeaks(audioBlob, 40);
-            onSendVoice(actualDuration, realPeaks, base64Url);
-          };
-          reader.readAsDataURL(audioBlob);
+      if (mediaRecorder.state !== 'inactive') {
+        mediaRecorder.onstop = async () => {
+          if (!cancel && actualDuration > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const base64Url = reader.result as string;
+              const realPeaks = await getAudioWaveformPeaks(audioBlob, 40);
+              onSendVoice(actualDuration, realPeaks, base64Url);
+            };
+            reader.readAsDataURL(audioBlob);
+          }
+        };
+        try {
+          mediaRecorder.stop();
+        } catch (e) {
+          console.warn("Error stopping media recorder:", e);
         }
-      };
-      mediaRecorder.stop();
+      } else {
+        if (!cancel && actualDuration > 0) {
+          onSendVoice(actualDuration, generateWaveform(40));
+        }
+      }
     } else {
       if (!cancel && actualDuration > 0) {
         onSendVoice(actualDuration, generateWaveform(40));
       }
     }
+    mediaRecorderRef.current = null;
     setRecordingTime(0);
   };
 
@@ -316,6 +335,26 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
 
       <div className="flex flex-col gap-2 relative z-50">
         <AnimatePresence>
+          {permissionDenied && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+              className="bg-red-500/10 backdrop-blur-md rounded-xl p-3 border border-red-500/20 border-l-4 border-l-red-500 flex items-center justify-between relative"
+            >
+              <div className="flex items-center gap-2 text-red-400">
+                <Mic size={16} className="shrink-0" />
+                <span className="text-xs font-semibold">
+                  Mic Permission Denied. Please enable microphone access to record voice notes.
+                </span>
+              </div>
+              <button 
+                onClick={() => setPermissionDenied(false)}
+                className="w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+
           {replyingTo && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
