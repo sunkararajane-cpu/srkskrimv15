@@ -1,4 +1,5 @@
 import { mockUsers } from './mockData';
+import { apiClient } from '../apiClient';
 
 function seedFromString(str: string): number {
   let hash = 0;
@@ -97,19 +98,38 @@ function writeStore(store: Record<string, PulseComment[]>) {
 }
 
 /** Loads (or generates + persists) the comment list for a post. */
-export function getPostComments(postId: string, displayCount?: number): PulseComment[] {
+export async function getPostComments(postId: string, displayCount?: number): Promise<PulseComment[]> {
+  try {
+    return await apiClient.get<PulseComment[]>(`/skrimchat-comments/posts/${postId}`);
+  } catch (err) {
+    console.warn(`TODO: Real backend GET /skrimchat-comments/posts/${postId} not ready. Returning local fallback.`, err);
+    return getPostCommentsLocal(postId, displayCount);
+  }
+}
+
+export function getPostCommentsLocal(postId: string, displayCount?: number): PulseComment[] {
   const store = readStore();
   if (store[postId]) return store[postId];
 
-  const count = displayCount !== undefined ? displayCount : getPostCommentCount(postId);
+  const count = displayCount !== undefined ? displayCount : getPostCommentCountLocal(postId);
   const generated = generateComments(postId, count);
   store[postId] = generated;
   writeStore(store);
   return generated;
 }
 
-/** Returns the current comment count for a post. If comments exist in store, return that count. Otherwise, return defaultCount or a seeded count if it's a mock post. */
-export function getPostCommentCount(postId: string, defaultCount?: number): number {
+/** Returns the current comment count for a post. */
+export async function getPostCommentCount(postId: string, defaultCount?: number): Promise<number> {
+  try {
+    const res = await apiClient.get<{ count: number }>(`/skrimchat-comments/posts/${postId}/count`);
+    return res.count;
+  } catch (err) {
+    console.warn(`TODO: Real backend GET /skrimchat-comments/posts/${postId}/count not ready. Returning local fallback.`, err);
+    return getPostCommentCountLocal(postId, defaultCount);
+  }
+}
+
+export function getPostCommentCountLocal(postId: string, defaultCount?: number): number {
   const store = readStore();
   if (store[postId]) {
     return store[postId].length;
@@ -137,7 +157,16 @@ export function getPostCommentCount(postId: string, defaultCount?: number): numb
 }
 
 /** Prepends a new user-written comment and persists it. */
-export function addPostComment(postId: string, comment: PulseComment): PulseComment[] {
+export async function addPostComment(postId: string, comment: PulseComment): Promise<PulseComment[]> {
+  try {
+    return await apiClient.post<PulseComment[]>(`/skrimchat-comments/posts/${postId}`, { comment });
+  } catch (err) {
+    console.warn(`TODO: Real backend POST /skrimchat-comments/posts/${postId} not ready. Returning local fallback.`, err);
+    return addPostCommentLocal(postId, comment);
+  }
+}
+
+export function addPostCommentLocal(postId: string, comment: PulseComment): PulseComment[] {
   const store = readStore();
   const existing = store[postId] || [];
   const updated = [comment, ...existing];

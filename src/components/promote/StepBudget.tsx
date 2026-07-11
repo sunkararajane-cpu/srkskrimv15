@@ -36,11 +36,15 @@ function diffDaysIso(startIso: string, endIso: string) {
 
 export function StepBudget({ draft, onChange }: StepBudgetProps) {
   const [payWithCoins, setPayWithCoins] = useState(false);
-  const [coinsBalance, setCoinsBalance] = useState(() => getCoins());
+  const [coinsBalance, setCoinsBalance] = useState(0);
   const [redeemed, setRedeemed] = useState(false);
 
   useEffect(() => {
-    const refresh = () => setCoinsBalance(getCoins());
+    const refresh = async () => {
+      const bal = await getCoins();
+      setCoinsBalance(bal);
+    };
+    refresh();
     window.addEventListener('skrimchat_coins_updated', refresh);
     return () => window.removeEventListener('skrimchat_coins_updated', refresh);
   }, []);
@@ -63,9 +67,9 @@ export function StepBudget({ draft, onChange }: StepBudgetProps) {
 
   const dates = duration > 0 ? addDays(duration) : null;
 
-  const handleRedeem = () => {
+  const handleRedeem = async () => {
     if (!canAffordWithCoins) return;
-    const ok = spendCoins(coinsNeeded, `Redeemed for ₹${total} ad`);
+    const ok = await spendCoins(coinsNeeded, `Redeemed for ₹${total} ad`);
     if (ok) setRedeemed(true);
   };
 

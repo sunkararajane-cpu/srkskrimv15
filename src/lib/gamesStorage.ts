@@ -1,4 +1,5 @@
 import { addCoins, coinsForScore } from './coinsWallet';
+import { apiClient } from './apiClient';
 
 export interface GameScore {
   playerName: string;
@@ -15,7 +16,19 @@ const GAME_LABELS: Record<string, string> = {
   bluffquiz: 'Bluff Quiz', bubbleshooter: 'Bubble Shooter',
 };
 
-export const saveGameScore = (gameId: string, score: number, playerName: string, avatar?: string) => {
+export async function saveGameScore(gameId: string, score: number, playerName: string, avatar?: string): Promise<number> {
+  try {
+    const res = await apiClient.post<{ rank: number }>('/skrimchat-games/scores', { gameId, score, playerName, avatar });
+    const label = GAME_LABELS[gameId] || gameId;
+    addCoins(coinsForScore(gameId, score), `${label} — scored ${score.toLocaleString()}`);
+    return res.rank;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-games/scores not ready. Returning local fallback.", err);
+    return saveGameScoreLocal(gameId, score, playerName, avatar);
+  }
+}
+
+export function saveGameScoreLocal(gameId: string, score: number, playerName: string, avatar?: string): number {
   const key = `skrimgames_scores`;
   const all = JSON.parse(localStorage.getItem(key) || "{}");
 
@@ -47,18 +60,36 @@ export const saveGameScore = (gameId: string, score: number, playerName: string,
   // Return the new rank
   const newRank = all[gameId].findIndex((s: GameScore) => s.score === score && s.playerName === playerName && s.timestamp >= Date.now() - 1000) + 1;
   return newRank;
-};
+}
 
-export const getGameScores = (gameId: string): GameScore[] => {
+export async function getGameScores(gameId: string): Promise<GameScore[]> {
+  try {
+    return await apiClient.get<GameScore[]>(`/skrimchat-games/scores/${gameId}`);
+  } catch (err) {
+    console.warn(`TODO: Real backend GET /skrimchat-games/scores/${gameId} not ready. Returning local fallback.`, err);
+    return getGameScoresLocal(gameId);
+  }
+}
+
+export function getGameScoresLocal(gameId: string): GameScore[] {
   const key = `skrimgames_scores`;
   const all = JSON.parse(localStorage.getItem(key) || "{}");
   return all[gameId] || [];
-};
+}
 
-export const getAllScores = (): Record<string, GameScore[]> => {
+export async function getAllScores(): Promise<Record<string, GameScore[]>> {
+  try {
+    return await apiClient.get<Record<string, GameScore[]>>('/skrimchat-games/scores');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-games/scores not ready. Returning local fallback.", err);
+    return getAllScoresLocal();
+  }
+}
+
+export function getAllScoresLocal(): Record<string, GameScore[]> {
   const key = `skrimgames_scores`;
   return JSON.parse(localStorage.getItem(key) || "{}");
-};
+}
 
 // Generate dummy scores if empty
 export const initializeDummyScores = () => {

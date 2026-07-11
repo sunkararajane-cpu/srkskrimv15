@@ -2834,7 +2834,7 @@ export default function VibesScreen() {
       setCurrentIdx(0);
     }
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       if (activeFilter === 'myvibes') {
         const sortedMyVibes = [...userVibes].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setVibes(sortedMyVibes);
@@ -2849,7 +2849,7 @@ export default function VibesScreen() {
       const offset = baseOffset + rOffset;
 
       // For "trending" sort by score desc already; "new" = reverse freshness; "following"/"orbit" = seeded different set
-      let initial = assembleVibesFeed(mood, offset, 12);
+      let initial = await assembleVibesFeed(mood, offset, 12);
 
       // Filter out reshared vibes from userVibes and sessionUserVibes unless we are in 'myvibes'
       const nonReshareUserVibes = userVibes.filter(v => !v.isReshare);
@@ -2895,11 +2895,11 @@ export default function VibesScreen() {
     if (activeFilter === 'myvibes') return;
     if (!loadingMore && vibes.length > 0 && currentIdx >= vibes.length - 3) {
       setLoadingMore(true);
-      setTimeout(() => {
+      setTimeout(async () => {
         const baseOffset = filterSeedOffset[activeFilter] ?? 0;
         const rOffset = refreshOffsets[activeFilter] ?? 0;
         const offset = baseOffset + rOffset + vibes.length;
-        const more = assembleVibesFeed(mood, offset, 8);
+        const more = await assembleVibesFeed(mood, offset, 8);
         
         setVibes(prev => {
           let deletedVibeIds: string[] = [];

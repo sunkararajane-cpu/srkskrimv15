@@ -58,13 +58,17 @@ const RECENT_GAMES = [
 export function SkrimGamesSection() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("all");
-  const [coins, setCoins] = useState(() => getCoins());
+  const [coins, setCoins] = useState(0);
   const [showCoinsInfo, setShowCoinsInfo] = useState(() => {
     try { return !localStorage.getItem('skrimchat_coins_info_seen'); } catch { return true; }
   });
 
   useEffect(() => {
-    const refresh = () => setCoins(getCoins());
+    const refresh = async () => {
+      const bal = await getCoins();
+      setCoins(bal);
+    };
+    refresh();
     window.addEventListener('skrimchat_coins_updated', refresh);
     return () => window.removeEventListener('skrimchat_coins_updated', refresh);
   }, []);

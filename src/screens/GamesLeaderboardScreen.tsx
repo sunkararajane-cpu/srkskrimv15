@@ -33,17 +33,25 @@ export default function GamesLeaderboardScreen() {
     const [activeTab, setActiveTab] = useState("overall");
     const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
     const [scores, setScores] = useState<Record<string, GameScore[]>>({});
-    const [coins, setCoins] = useState(() => getCoins());
+    const [coins, setCoins] = useState(0);
 
     useEffect(() => {
-        const refresh = () => setCoins(getCoins());
+        const refresh = async () => {
+            const bal = await getCoins();
+            setCoins(bal);
+        };
+        refresh();
         window.addEventListener('skrimchat_coins_updated', refresh);
         return () => window.removeEventListener('skrimchat_coins_updated', refresh);
     }, []);
 
     useEffect(() => {
-        initializeDummyScores();
-        setScores(getAllScores());
+        const fetchScores = async () => {
+            initializeDummyScores();
+            const res = await getAllScores();
+            setScores(res);
+        };
+        fetchScores();
     }, []);
 
     const filteredScores = useMemo(() => {

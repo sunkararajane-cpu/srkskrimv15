@@ -3,6 +3,7 @@
 // ============================================================
 
 import { generateMockStatsForBadge } from './mockBadges';
+import { apiClient } from '../apiClient';
 
 // ─── Users ───────────────────────────────────────────────────
 export const MOCK_USERS = [
@@ -113,7 +114,17 @@ function seededRand(seed: number): number {
 }
 
 // ─── Skrim Score v2 (deterministic per post) ──────────────────
-export function calculateSkrimScore(post: any, userMood: string, followedHandles: string[] = []) {
+export async function calculateSkrimScore(post: any, userMood: string, followedHandles: string[] = []): Promise<number> {
+  try {
+    const res = await apiClient.post<{ score: number }>('/skrimchat-tr/score', { post, userMood, followedHandles });
+    return res.score;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-tr/score not ready. Returning local calculation.", err);
+    return calculateSkrimScoreLocal(post, userMood, followedHandles);
+  }
+}
+
+export function calculateSkrimScoreLocal(post: any, userMood: string, followedHandles: string[] = []): number {
   const seed = parseInt(post.id?.replace(/\D/g, '').slice(0, 8) || '0', 10) || 0;
 
   // Pulse speed (based on likes, deterministic)
@@ -338,7 +349,22 @@ export function generateBattle(idx: number): any {
 }
 
 // ─── Main feed assembler ──────────────────────────────────────
-export function assembleFeed(
+export async function assembleFeed(
+  mood: string,
+  startIndex: number,
+  pageSize: number = 10,
+  followedHandles: string[] = [],
+  tab: 'foryou' | 'following' = 'foryou',
+): Promise<any[]> {
+  try {
+    return await apiClient.get<any[]>(`/skrimchat-tr/feed?mood=${encodeURIComponent(mood)}&startIndex=${startIndex}&pageSize=${pageSize}&tab=${tab}`);
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-tr/feed not ready. Returning local mock feed.", err);
+    return assembleFeedLocal(mood, startIndex, pageSize, followedHandles, tab);
+  }
+}
+
+export function assembleFeedLocal(
   mood: string,
   startIndex: number,
   pageSize: number = 10,
@@ -369,7 +395,7 @@ export function assembleFeed(
     if (tab === 'following' && !isFollowing && globalIdx % 3 !== 0) continue;
 
     const post = generateSinglePost(mood, globalIdx, isFollowing);
-    const score = calculateSkrimScore(post, mood, followedHandles);
+    const score = calculateSkrimScoreLocal(post, mood, followedHandles);
     feed.push({ ...post, skrimScore: score, temperature: getVibeTemperature(score) });
   }
 
@@ -456,7 +482,17 @@ const VIBE_AUDIO = [
   "AP Dhillon x Shubh mashup ⚡", "Carnatic Beat Drop 🎹",
 ];
 
-export function calculateVibeScore(vibe: Partial<VibePost>, userMood: string): number {
+export async function calculateVibeScore(vibe: Partial<VibePost>, userMood: string): Promise<number> {
+  try {
+    const res = await apiClient.post<{ score: number }>('/skrimchat-tr/vibe-score', { vibe, userMood });
+    return res.score;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-tr/vibe-score not ready. Returning local calculation.", err);
+    return calculateVibeScoreLocal(vibe, userMood);
+  }
+}
+
+export function calculateVibeScoreLocal(vibe: Partial<VibePost>, userMood: string): number {
   const seed = parseInt(vibe.id?.replace(/\D/g, '').slice(0, 8) || '0', 10) || 0;
 
   // Watch-time score (simulated: based on engagement proxy)
@@ -555,11 +591,20 @@ export function generateVibePost(idx: number, userMood: string): VibePost {
     isSaved: false,
   };
 
-  const vibeScore = calculateVibeScore(vibe, userMood);
+  const vibeScore = calculateVibeScoreLocal(vibe, userMood);
   return { ...vibe, vibeScore } as VibePost;
 }
 
-export function assembleVibesFeed(userMood: string, startIdx: number, count: number = 8): VibePost[] {
+export async function assembleVibesFeed(userMood: string, startIdx: number, count: number = 8): Promise<VibePost[]> {
+  try {
+    return await apiClient.get<VibePost[]>(`/skrimchat-tr/vibes?userMood=${encodeURIComponent(userMood)}&startIdx=${startIdx}&count=${count}`);
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-tr/vibes not ready. Returning local mock vibes.", err);
+    return assembleVibesFeedLocal(userMood, startIdx, count);
+  }
+}
+
+export function assembleVibesFeedLocal(userMood: string, startIdx: number, count: number = 8): VibePost[] {
   const vibes = Array.from({ length: count * 2 }, (_, i) =>
     generateVibePost(startIdx + i, userMood)
   );

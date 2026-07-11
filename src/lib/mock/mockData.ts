@@ -1,3 +1,5 @@
+import { apiClient } from '../apiClient';
+
 const funnyUsers = [
   { name: "Bappu Bhai Sharma", username: "bappu_bhai", bio: "Chai peeta hoon,\n  sapne bechta hoon ☕🚀" },
   { name: "Pappu Pandey", username: "pappu_pass_hogaya", bio: "Finally passed 12th\n  in 5th attempt 🎓😂" },
@@ -442,6 +444,60 @@ export const mockAdminData = {
   userManagement: "8.4K",
   chartData: [100, 150, 120, 200, 180, 250, 300]
 };
+
+// ─── NEW BACKEND-FACING API ENDPOINTS ─────────────────────────────────────────
+
+// TODO stub for Posts Endpoint - returns same shape
+export async function getPostsFromApi(): Promise<any[]> {
+  try {
+    return await apiClient.get<any[]>('/posts');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /posts endpoint is not ready yet. Returning stub promise.", err);
+    return [...mockPosts];
+  }
+}
+
+// TODO stub for Vibes Endpoint - returns same shape
+export async function getVibesFromApi(): Promise<any[]> {
+  try {
+    return await apiClient.get<any[]>('/vibes');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /vibes endpoint is not ready yet. Returning stub promise.", err);
+    // Mimic assembly of vibe posts
+    return Array.from({ length: 15 }).map((_, i) => ({
+      id: `vibe_${i + 1}`,
+      type: 'video',
+      user: mockUsers[i % mockUsers.length].displayName,
+      handle: `@${mockUsers[i % mockUsers.length].username}`,
+      avatar: mockUsers[i % mockUsers.length].avatar,
+      thumbnail: `https://picsum.photos/seed/vibe${i}/500/900`,
+      caption: `Real vibe stream post ${i + 1} #vibes`,
+      audio: `Original Audio - Vibe ${i + 1}`,
+      createdAt: Date.now() - (i + 1) * 3600000,
+      likes: randomBetween(1000, 10000),
+      pulseCount: randomBetween(1000, 10000),
+      comments: randomBetween(50, 500),
+      shares: randomBetween(10, 200),
+      saves: randomBetween(10, 200),
+      reactions: { pulse: randomBetween(100, 1000) },
+      creatorCountry: 'India',
+      creatorTier: 'SPARK',
+      vibeScore: 50,
+      mood: 'chill'
+    }));
+  }
+}
+
+// TODO stub for Sparks Endpoint - returns same shape
+export async function getSparksFromApi(): Promise<any[]> {
+  try {
+    return await apiClient.get<any[]>('/sparks');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /sparks endpoint is not ready yet. Returning stub promise.", err);
+    return [...mockSparks];
+  }
+}
+
 
 const offsets = [
   1 * 3600 * 1000,

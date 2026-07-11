@@ -81,14 +81,18 @@ export function ImmersivePostViewer({ initialIndex, type, urls, user, users, onC
   const totalCommentsCount = currentPost?.comments || 0;
 
   useEffect(() => {
-    const loadedComments = getPostComments(currentPostId, totalCommentsCount).map((c: any) => ({
-      ...c,
-      username: c.username || (c.handle.startsWith('@') ? c.handle : `@${c.handle}`),
-    }));
-    setComments(loadedComments);
+    const fetchComments = async () => {
+      const rawComments = await getPostComments(currentPostId, totalCommentsCount);
+      const loadedComments = rawComments.map((c: any) => ({
+        ...c,
+        username: c.username || (c.handle.startsWith('@') ? c.handle : `@${c.handle}`),
+      }));
+      setComments(loadedComments);
+    };
+    fetchComments();
   }, [currentPostId, totalCommentsCount]);
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = async () => {
     if (!commentInput.trim()) return;
     const text = commentInput.trim();
     const newId = `${currentPostId}_${user?.username?.replace('@', '') || 'you'}_${Date.now()}`;
@@ -102,7 +106,7 @@ export function ImmersivePostViewer({ initialIndex, type, urls, user, users, onC
     };
     
     // Persist to database
-    addPostComment(currentPostId, newComment);
+    await addPostComment(currentPostId, newComment);
     
     // Add to local state (mapped for ImmersivePostViewer rendering compatibility)
     const mappedComment = {

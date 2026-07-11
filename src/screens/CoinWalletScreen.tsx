@@ -37,23 +37,26 @@ function timeAgo(ts: number) {
 
 export default function CoinWalletScreen() {
   const navigate = useNavigate();
-  const [balance, setBalance] = useState(getCoins());
-  const [log, setLog] = useState<CoinsLogEntry[]>(getCoinsLog());
+  const [balance, setBalance] = useState(0);
+  const [log, setLog] = useState<CoinsLogEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'history' | 'earn' | 'buy'>('history');
   const [buyToast, setBuyToast] = useState('');
 
   useEffect(() => {
-    const refresh = () => {
-      setBalance(getCoins());
-      setLog(getCoinsLog());
+    const refresh = async () => {
+      const bal = await getCoins();
+      const lg = await getCoinsLog();
+      setBalance(bal);
+      setLog(lg);
     };
+    refresh();
     window.addEventListener('skrimchat_coins_updated', refresh);
     return () => window.removeEventListener('skrimchat_coins_updated', refresh);
   }, []);
 
-  const handleBuy = (pack: typeof COIN_PACKS[0]) => {
+  const handleBuy = async (pack: typeof COIN_PACKS[0]) => {
     // Simulate purchase
-    addCoins(pack.coins, `Purchased ${formatCoins(pack.coins)} coin pack`);
+    await addCoins(pack.coins, `Purchased ${formatCoins(pack.coins)} coin pack`);
     setBuyToast(`${formatCoins(pack.coins)} coins added to your wallet! 🎉`);
     setTimeout(() => setBuyToast(''), 3000);
   };

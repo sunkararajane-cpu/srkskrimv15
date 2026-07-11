@@ -3344,7 +3344,7 @@ export default function PulseScreen() {
     if (append) setIsLoadingMore(true);
 
     setTimeout(async () => {
-      const newPosts = assembleFeed(mood, page * 10, 10, [], tab);
+      const newPosts = await assembleFeed(mood, page * 10, 10, [], tab);
       let savedList: string[] = [];
       let likedList: string[] = [];
       let likeCounts: Record<string,number> = {};
@@ -3459,7 +3459,7 @@ export default function PulseScreen() {
 
   // Simulated live pulse ticks
   useEffect(() => {
-    const t = setInterval(() => {
+    const t = setInterval(async () => {
       setPosts(prev => prev.map(post => {
         if (post.type !== 'image' && post.type !== 'multi_image' && post.type !== 'video_thumb' && post.type !== 'text') return post;
         const vm = VELOCITY_MAP[post.temperature?.id || 'COLD'] || 0.1;
@@ -3471,7 +3471,7 @@ export default function PulseScreen() {
       try {
         const randIdx = 1000 + Math.floor(Math.random() * 9000);
         const post = generateSinglePost(selectedMood, randIdx, false);
-        const score = calculateSkrimScore(post, selectedMood, []);
+        const score = await calculateSkrimScore(post, selectedMood, []);
         const completePost = {
           ...post,
           id: `simulated_live_${Date.now()}_${randIdx}`,
@@ -3496,7 +3496,7 @@ export default function PulseScreen() {
   }, [selectedMood]);
 
   const doRefreshFetch = async () => {
-    const fresh = assembleFeed(selectedMood, 0, 10, [], activeTab);
+    const fresh = await assembleFeed(selectedMood, 0, 10, [], activeTab);
     let saved: string[] = [];
     let liked: string[] = [];
     let counts: Record<string,number> = {};

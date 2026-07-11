@@ -6,6 +6,7 @@
 // show the correct person for whichever chat is actually open.
 
 import { mockUsers } from './mockData';
+import { apiClient } from '../apiClient';
 
 export interface MockChatEntry {
   id: string;
@@ -32,6 +33,49 @@ export const MOCK_CHATS: MockChatEntry[] = [
   { id: "7", name: "Vibes Gang 🌟", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=vibes1", avatar2: "https://api.dicebear.com/7.x/avataaars/svg?seed=vibes2", lastMessage: "Priya: sending good vibes only✨", time: "Sun", unread: 5, online: false, isGroup: true, blazeGrind: 0, pinned: false }
 ];
 
+let cachedChats: MockChatEntry[] = [...MOCK_CHATS];
+
+export async function getChatsFromApi(): Promise<MockChatEntry[]> {
+  try {
+    const list = await apiClient.get<MockChatEntry[]>('/chats');
+    cachedChats = list;
+    return list;
+  } catch (err) {
+    console.warn("TODO: Real backend GET /chats not ready. Using cached/local state.", err);
+    return cachedChats;
+  }
+}
+
+export async function createChatOnApi(chat: Partial<MockChatEntry>): Promise<MockChatEntry> {
+  try {
+    const created = await apiClient.post<MockChatEntry>('/chats', chat);
+    const existingIdx = cachedChats.findIndex(c => c.id === created.id);
+    if (existingIdx > -1) {
+      cachedChats[existingIdx] = created;
+    } else {
+      cachedChats.push(created);
+    }
+    return created;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /chats not ready. Mocking creation.", err);
+    const mockCreated: MockChatEntry = {
+      id: chat.id || Date.now().toString(),
+      name: chat.name || 'Chat',
+      avatar: chat.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=unknown',
+      lastMessage: chat.lastMessage || '',
+      time: chat.time || 'Just now',
+      unread: chat.unread || 0,
+      online: chat.online !== undefined ? chat.online : true,
+      blazeGrind: chat.blazeGrind || 0,
+      pinned: chat.pinned || false,
+      isGroup: chat.isGroup,
+      username: chat.username
+    };
+    cachedChats.push(mockCreated);
+    return mockCreated;
+  }
+}
+
 /**
  * Resolve a chat participant (or group) by the id used in the /chat/:id route.
  * Falls back gracefully for custom/group chats created at runtime
@@ -44,9 +88,9 @@ export function getChatById(chatId?: string | null): { displayName: string; avat
     return { displayName: 'Chat', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=unknown', isGroup: false };
   }
 
-  const fromMock = MOCK_CHATS.find(c => c.id === chatId);
-  if (fromMock) {
-    return { displayName: fromMock.name, avatar: fromMock.avatar, isGroup: !!fromMock.isGroup, username: fromMock.username };
+  const fromCache = cachedChats.find(c => c.id === chatId);
+  if (fromCache) {
+    return { displayName: fromCache.name, avatar: fromCache.avatar, isGroup: !!fromCache.isGroup, username: fromCache.username };
   }
 
   // Custom 1:1 chats created via "custom_<username>" keys (see ConnectScreen / shareSpark)
@@ -76,3 +120,14 @@ export function getChatById(chatId?: string | null): { displayName: string; avat
 
   return { displayName: 'Chat', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=unknown', isGroup: false };
 }
+
+export async function getChatByIdAsync(chatId?: string | null): Promise<{ displayName: string; avatar: string; isGroup: boolean; username?: string }> {
+  try {
+    const remoteChat = await apiClient.get<{ displayName: string; avatar: string; isGroup: boolean; username?: string }>(`/chats/${chatId}`);
+    return remoteChat;
+  } catch (err) {
+    console.warn("TODO: Real backend GET /chats/:id not ready. Falling back to local/cached lookup.", err);
+    return getChatById(chatId);
+  }
+}
+

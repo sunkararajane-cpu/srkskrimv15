@@ -2,6 +2,8 @@
 // Mirrors the conventions used in mockData.ts / mockSocialGraph.ts —
 // deterministic, seeded-looking data instead of fully random noise.
 
+import { apiClient } from '../apiClient';
+
 export type MoodStatus = 'want_to_chat' | 'busy' | 'looking_for_friends' | 'study_partner' | 'invisible';
 
 export const MOOD_META: Record<MoodStatus, { label: string; emoji: string; color: string }> = {
@@ -127,3 +129,39 @@ export const mockOrbitEvents: OrbitEvent[] = [
   { id: 'evt_cricket', text: '8 cricket fans orbit', cta: 'Start a discussion?', count: 8 },
   { id: 'evt_movie', text: '5 movie buffs orbit', cta: 'Start a watch party chat?', count: 5 },
 ];
+
+export async function getOrbitUsersAsync(): Promise<OrbitUser[]> {
+  try {
+    return await apiClient.get<OrbitUser[]>('/presence/orbit/users');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /presence/orbit/users not ready. Returning mock.", err);
+    return mockOrbitUsers;
+  }
+}
+
+export async function getActivityRoomsAsync(): Promise<ActivityRoom[]> {
+  try {
+    return await apiClient.get<ActivityRoom[]>('/presence/orbit/rooms');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /presence/orbit/rooms not ready. Returning mock.", err);
+    return mockActivityRooms;
+  }
+}
+
+export async function getOrbitEventsAsync(): Promise<OrbitEvent[]> {
+  try {
+    return await apiClient.get<OrbitEvent[]>('/presence/orbit/events');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /presence/orbit/events not ready. Returning mock.", err);
+    return mockOrbitEvents;
+  }
+}
+
+export async function updatePresenceAsync(mood: MoodStatus, duration: PresenceDuration): Promise<void> {
+  try {
+    await apiClient.post('/presence/orbit/update', { mood, duration });
+  } catch (err) {
+    console.warn("TODO: Real backend POST /presence/orbit/update not ready.", err);
+  }
+}
+

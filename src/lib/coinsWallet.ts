@@ -4,6 +4,8 @@
 // can react live), kept in its own file since coins are a distinct
 // currency from Pulse score, not just another tracked stat.
 
+import { apiClient } from './apiClient';
+
 const COINS_KEY = "skrimchat_coins";
 const COINS_LOG_KEY = "skrimchat_coins_log"; // recent earn/spend history, for the "Coins" screen
 
@@ -44,13 +46,32 @@ function safeSet(key: string, value: string) {
   }
 }
 
-export function getCoins(): number {
+export async function getCoins(): Promise<number> {
+  try {
+    const res = await apiClient.get<{ balance: number }>('/skrimchat-coins/balance');
+    return res.balance;
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-coins/balance not ready. Returning local fallback.", err);
+    return getCoinsLocal();
+  }
+}
+
+export function getCoinsLocal(): number {
   const raw = safeGet(COINS_KEY);
   const n = raw ? parseInt(raw, 10) : 0;
   return Number.isFinite(n) ? n : 0;
 }
 
-export function getCoinsLog(): CoinsLogEntry[] {
+export async function getCoinsLog(): Promise<CoinsLogEntry[]> {
+  try {
+    return await apiClient.get<CoinsLogEntry[]>('/skrimchat-coins/transactions');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-coins/transactions not ready. Returning local fallback.", err);
+    return getCoinsLogLocal();
+  }
+}
+
+export function getCoinsLogLocal(): CoinsLogEntry[] {
   const raw = safeGet(COINS_LOG_KEY);
   if (!raw) return [];
   try {
@@ -65,24 +86,21 @@ function appendLog(entry: CoinsLogEntry) {
   // Kept generously long (not just the 50 shown in the Coins screen) so the
   // Data Retention engine has a real per-transaction ledger to expire
   // oldest-first, rather than only ever seeing the most recent 50.
-  const log = [entry, ...getCoinsLog()].slice(0, 2000);
+  const log = [entry, ...getCoinsLogLocal()].slice(0, 2000);
   safeSet(COINS_LOG_KEY, JSON.stringify(log));
 }
 
 /**
  * Expires individual coin-log entries once they cross the configured
  * retention age, oldest-first, subtracting only that entry's amount from
- * the running balance rather than wiping the whole wallet at once. `spend`
- * entries are left alone — they're a record of a debit, not a coin grant
- * still contributing to the balance — only `earn`/purchase entries reduce
- * the balance when expired, since spends never expire as a balance amount.
+ * the running balance rather than wiping the whole wallet at once.
  */
 export function expireCoinTransactions(
   durationDays: number,
   now: number,
   isExpired: (createdAt: number | undefined | null, durationDays: any, now: number) => boolean
 ): void {
-  const log = getCoinsLog();
+  const log = getCoinsLogLocal();
   if (log.length === 0) return;
 
   // Oldest first so earlier grants are pruned before more recent ones.
@@ -104,7 +122,7 @@ export function expireCoinTransactions(
   safeSet(COINS_LOG_KEY, JSON.stringify(remainingLog));
 
   if (balanceDelta !== 0) {
-    const next = Math.max(0, getCoins() + balanceDelta);
+    const next = Math.max(0, getCoinsLocal() + balanceDelta);
     safeSet(COINS_KEY, next.toString());
   }
   notify();
@@ -114,24 +132,43 @@ function notify() {
   window.dispatchEvent(new Event("skrimchat_coins_updated"));
 }
 
-/** Adds coins (earning). Use `spendCoins` for the reverse — kept separate
- *  so the log always reads correctly as "earn" vs "spend". */
-export function addCoins(amount: number, reason: string): number {
-  if (amount <= 0) return getCoins();
-  const next = getCoins() + Math.round(amount);
+/** Adds coins (earning). */
+export async function addCoins(amount: number, reason: string): Promise<number> {
+  try {
+    const res = await apiClient.post<{ balance: number }>('/skrimchat-coins/earn', { amount, reason });
+    notify();
+    return res.balance;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-coins/earn not ready. Returning local fallback.", err);
+    return addCoinsLocal(amount, reason);
+  }
+}
+
+export function addCoinsLocal(amount: number, reason: string): number {
+  if (amount <= 0) return getCoinsLocal();
+  const next = getCoinsLocal() + Math.round(amount);
   safeSet(COINS_KEY, next.toString());
   appendLog({ id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, type: "earn", amount: Math.round(amount), reason, timestamp: Date.now() });
   notify();
   return next;
 }
 
-/** Spends coins if there's enough balance. Returns false (and changes
- *  nothing) if the balance is insufficient, so callers can show an
- *  insufficient-balance state instead of going negative. */
-export function spendCoins(amount: number, reason: string): boolean {
+/** Spends coins if there's enough balance. */
+export async function spendCoins(amount: number, reason: string): Promise<boolean> {
+  try {
+    const res = await apiClient.post<{ success: boolean }>('/skrimchat-coins/spend', { amount, reason });
+    notify();
+    return res.success;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-coins/spend not ready. Returning local fallback.", err);
+    return spendCoinsLocal(amount, reason);
+  }
+}
+
+export function spendCoinsLocal(amount: number, reason: string): boolean {
   const amt = Math.round(amount);
   if (amt <= 0) return true;
-  const current = getCoins();
+  const current = getCoinsLocal();
   if (current < amt) return false;
   const next = current - amt;
   safeSet(COINS_KEY, next.toString());

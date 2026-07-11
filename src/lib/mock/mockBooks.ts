@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { apiClient } from '../apiClient';
+
 export interface Book {
   id: string;
   ownerUsername: string;
@@ -58,7 +60,7 @@ const DEFAULT_BOOKS: Book[] = [
     ownerDisplayName: "Skrim Library",
     title: "The Great Gatsby",
     author: "F. Scott Fitzgerald",
-    fileName: "the_great_gatsby.pdf",
+    fileName: "the_gatsby.pdf",
     sizeBytes: 154000,
     uploadedAt: 1782136400000,
     description: "The classic 1925 novel following a cast of characters living in the fictional towns of West Egg and East Egg on prosperous Long Island in the summer of 1922.",
@@ -84,11 +86,29 @@ export function getStoredBooks(): Book[] {
   }
 }
 
+export async function getStoredBooksAsync(): Promise<Book[]> {
+  try {
+    return await apiClient.get<Book[]>('/books');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /books not ready yet. Returning cached/local books.", err);
+    return getStoredBooks();
+  }
+}
+
 export function saveStoredBooks(books: Book[]): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('skrimchat_books', JSON.stringify(books));
     window.dispatchEvent(new Event('skrimchat_books_updated'));
   }
+}
+
+export async function saveStoredBooksAsync(books: Book[]): Promise<void> {
+  try {
+    await apiClient.post('/books/sync', { books });
+  } catch (err) {
+    console.warn("TODO: Real backend POST /books/sync not ready yet.", err);
+  }
+  saveStoredBooks(books);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -151,10 +171,18 @@ export async function deletePDFBlob(id: string): Promise<void> {
 export async function addBookWithBlob(bookMeta: Omit<Book, 'id' | 'uploadedAt' | 'dataUrl'>, fileBlob: Blob): Promise<Book> {
   const id = 'b_' + Math.random().toString(36).substr(2, 9);
   
-  // Store Blob in IndexedDB
+  try {
+    const formData = new FormData();
+    formData.append('file', fileBlob);
+    formData.append('metadata', JSON.stringify(bookMeta));
+    const created = await apiClient.post<Book>('/books/upload', formData);
+    return created;
+  } catch (err) {
+    console.warn("TODO: Real backend POST /books/upload not ready. Falling back to IndexedDB/local storage.", err);
+  }
+
   await storePDFBlob(id, fileBlob);
   
-  // Store metadata in localStorage (with no massive base64 payload!)
   const books = getStoredBooks();
   const newBook: Book = {
     ...bookMeta,
@@ -179,15 +207,22 @@ export function addBook(book: Omit<Book, 'id' | 'uploadedAt'>): Book {
   return newBook;
 }
 
+export async function addBookAsync(book: Omit<Book, 'id' | 'uploadedAt'>): Promise<Book> {
+  try {
+    return await apiClient.post<Book>('/books', book);
+  } catch (err) {
+    console.warn("TODO: Real backend POST /books not ready. Using local fallback.", err);
+    return addBook(book);
+  }
+}
+
 export function deleteBook(id: string): boolean {
   const books = getStoredBooks();
   const filtered = books.filter(b => b.id !== id);
   if (filtered.length !== books.length) {
     saveStoredBooks(filtered);
-    // Asynchronously delete the PDF blob from IndexedDB (fire-and-forget)
     deletePDFBlob(id).catch(err => console.error("Failed to delete PDF blob from IndexedDB:", err));
     
-    // Also delete any bookmarks for this book
     const bookmarks = getBookmarks();
     const remainingBookmarks = bookmarks.filter(b => b.bookId !== id);
     saveBookmarks(remainingBookmarks);
@@ -195,6 +230,16 @@ export function deleteBook(id: string): boolean {
     return true;
   }
   return false;
+}
+
+export async function deleteBookAsync(id: string): Promise<boolean> {
+  try {
+    await apiClient.delete(`/books/${id}`);
+    return true;
+  } catch (err) {
+    console.warn("TODO: Real backend DELETE /books/:id not ready. Using local fallback.", err);
+    return deleteBook(id);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -223,6 +268,16 @@ export function getBookmarks(bookId?: string): Bookmark[] {
   }
 }
 
+export async function getBookmarksAsync(bookId?: string): Promise<Bookmark[]> {
+  try {
+    const url = bookId ? `/books/bookmarks?bookId=${bookId}` : '/books/bookmarks';
+    return await apiClient.get<Bookmark[]>(url);
+  } catch (err) {
+    console.warn("TODO: Real backend GET /books/bookmarks not ready. Returning local bookmarks.", err);
+    return getBookmarks(bookId);
+  }
+}
+
 export function saveBookmarks(bookmarks: Bookmark[]): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem('skrimchat_bookmarks', JSON.stringify(bookmarks));
@@ -230,12 +285,19 @@ export function saveBookmarks(bookmarks: Bookmark[]): void {
   }
 }
 
+export async function saveBookmarksAsync(bookmarks: Bookmark[]): Promise<void> {
+  try {
+    await apiClient.post('/books/bookmarks/sync', { bookmarks });
+  } catch (err) {
+    console.warn("TODO: Real backend POST /books/bookmarks/sync not ready.", err);
+  }
+  saveBookmarks(bookmarks);
+}
+
 export function addBookmark(bookId: string, pageIndex: number, label: string): Bookmark {
   const bookmarks = getBookmarks();
-  // Avoid duplicate bookmarks for the exact same page index
   const existingIndex = bookmarks.findIndex(b => b.bookId === bookId && b.pageIndex === pageIndex);
   if (existingIndex !== -1) {
-    // Update label
     bookmarks[existingIndex].label = label;
     bookmarks[existingIndex].createdAt = Date.now();
     saveBookmarks(bookmarks);
@@ -254,9 +316,28 @@ export function addBookmark(bookId: string, pageIndex: number, label: string): B
   return newBookmark;
 }
 
+export async function addBookmarkAsync(bookId: string, pageIndex: number, label: string): Promise<Bookmark> {
+  try {
+    return await apiClient.post<Bookmark>('/books/bookmarks', { bookId, pageIndex, label });
+  } catch (err) {
+    console.warn("TODO: Real backend POST /books/bookmarks not ready. Falling back to local.", err);
+    return addBookmark(bookId, pageIndex, label);
+  }
+}
+
 export function deleteBookmark(id: string): void {
   const bookmarks = getBookmarks();
   const filtered = bookmarks.filter(b => b.id !== id);
   saveBookmarks(filtered);
 }
+
+export async function deleteBookmarkAsync(id: string): Promise<void> {
+  try {
+    await apiClient.delete(`/books/bookmarks/${id}`);
+  } catch (err) {
+    console.warn("TODO: Real backend DELETE /books/bookmarks/:id not ready. Falling back to local.", err);
+    deleteBookmark(id);
+  }
+}
+
 

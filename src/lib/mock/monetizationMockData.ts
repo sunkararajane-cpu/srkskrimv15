@@ -1,6 +1,8 @@
 // Mock data for Creator Dashboard, Promote (Ads), and Monetization Hub.
 // All numbers are static mock data — no backend calls.
 
+import { apiClient } from '../apiClient';
+
 export const OVERVIEW_DATA = {
   metrics: {
     views: { value: 45200, change: 18, trend: "up" as const },
@@ -343,7 +345,7 @@ export const CITIES_BY_STATE: Record<string, string[]> = {
   "Tripura": ["Agartala","Udaipur","Dharmanagar","Kailasahar","Belonia","Khowai","Ambassa","Sabroom","Sonamura"],
   "Uttar Pradesh": ["Lucknow","Kanpur","Ghaziabad","Agra","Varanasi","Meerut","Prayagraj","Bareilly","Aligarh","Moradabad","Saharanpur","Gorakhpur","Noida","Firozabad","Loni","Jhansi","Muzaffarnagar","Mathura","Rampur","Shahjahanpur","Mau","Hapur","Etawah","Sambhal","Amroha","Hardoi","Fatehpur","Raebareli","Orai","Sitapur","Bahraich","Modinagar","Unnao","Jaunpur","Lakhimpur","Hathras","Banda","Pilibhit","Barabanki","Khurja","Gonda","Mainpuri","Lalitpur","Etah","Deoria","Ghazipur","Sultanpur","Azamgarh","Badaun","Bijnor"],
   "Uttarakhand": ["Dehradun","Haridwar","Roorkee","Haldwani","Rudrapur","Kashipur","Rishikesh","Kotdwar","Ramnagar","Pithoragarh","Mussoorie","Nainital","Tehri","Almora","Chamoli"],
-  "West Bengal": ["Kolkata","Asansol","Siliguri","Durgapur","Bardhaman","Malda","Baharampur","Habra","Jalpaiguri","Kharagpur","Shantipur","Dankuni","Dhulian","Ranaghat","Haldia","Raiganj","Krishnanagar","Nabadwip","Medinipur","Cooch Behar","Serampore","Bankura","Howrah","Darjeeling","Purulia","Balurghat","Basirhat","Tamluk"],
+  "West Bengal": ["Kolkata","Asansol","Siliguri","Durgapur","Bardhaman","Malda","Baharampur","Habra","Jalpiaguri","Kharagpur","Shantipur","Dankuni","Dhulian","Ranaghat","Haldia","Raiganj","Krishnanagar","Nabadwip","Medinipur","Cooch Behar","Serampore","Bankura","Howrah","Darjeeling","Purulia","Balurghat","Basirhat","Tamluk"],
   "Delhi": ["New Delhi","Dwarka","Rohini","Saket","Lajpat Nagar","Karol Bagh","Connaught Place","Janakpuri","Pitampura","Mayur Vihar","Preet Vihar","Vasant Kunj","Nehru Place","Rajouri Garden","Shahdara","Okhla","Narela","Sarojini Nagar","Laxmi Nagar","Greater Kailash","Malviya Nagar","Kirti Nagar"],
   "Jammu & Kashmir": ["Srinagar","Jammu","Anantnag","Baramulla","Sopore","Udhampur","Kathua","Rajauri","Poonch","Pulwama","Ganderbal","Bandipore","Kupwara","Doda","Reasi"],
   "Ladakh": ["Leh","Kargil","Nubra","Zanskar","Drass"],
@@ -511,3 +513,114 @@ export interface TicketedEvent {
 export const TICKETS_CONFIG: { active: boolean; events: TicketedEvent[] } = { active: false, events: [] };
 
 export const PAYMENT_TEST = { simulateSuccess: true, simulateFailure: false, failureReason: "Card declined" };
+
+// ─── ASYNC API ENDPOINTS FOR SKRIMCHAT-MONETIZATION ────────────────────────────
+export async function getOverviewDataAsync(): Promise<typeof OVERVIEW_DATA> {
+  try {
+    return await apiClient.get<typeof OVERVIEW_DATA>('/skrimchat-monetization/overview');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/overview not ready. Returning mock.", err);
+    return OVERVIEW_DATA;
+  }
+}
+
+export async function getContentDataAsync(): Promise<typeof CONTENT_DATA> {
+  try {
+    return await apiClient.get<typeof CONTENT_DATA>('/skrimchat-monetization/content');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/content not ready. Returning mock.", err);
+    return CONTENT_DATA;
+  }
+}
+
+export async function getAudienceDataAsync(): Promise<typeof AUDIENCE_DATA> {
+  try {
+    return await apiClient.get<typeof AUDIENCE_DATA>('/skrimchat-monetization/audience');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/audience not ready. Returning mock.", err);
+    return AUDIENCE_DATA;
+  }
+}
+
+export async function getLiveDataAsync(): Promise<typeof LIVE_DATA> {
+  try {
+    return await apiClient.get<typeof LIVE_DATA>('/skrimchat-monetization/live');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/live not ready. Returning mock.", err);
+    return LIVE_DATA;
+  }
+}
+
+export async function getEarningsDataAsync(): Promise<typeof EARNINGS_DATA> {
+  try {
+    return await apiClient.get<typeof EARNINGS_DATA>('/skrimchat-monetization/earnings');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/earnings not ready. Returning mock.", err);
+    return EARNINGS_DATA;
+  }
+}
+
+export async function getCampaignsAsync(): Promise<Campaign[]> {
+  try {
+    return await apiClient.get<Campaign[]>('/skrimchat-monetization/campaigns');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/campaigns not ready. Returning mock.", err);
+    return CAMPAIGNS;
+  }
+}
+
+export async function createCampaignAsync(campaignDraft: Partial<Campaign>): Promise<Campaign> {
+  try {
+    return await apiClient.post<Campaign>('/skrimchat-monetization/campaigns', campaignDraft);
+  } catch (err) {
+    console.warn("TODO: Real backend POST /skrimchat-monetization/campaigns not ready. Creating local mock.", err);
+    const mockCreated: Campaign = {
+      id: campaignDraft.id || 'cmp_' + Math.random().toString(36).substr(2, 9),
+      title: campaignDraft.title || 'Untitled Campaign',
+      thumbnail: campaignDraft.thumbnail || 'https://picsum.photos/200/200?random=1',
+      format: campaignDraft.format || 'post',
+      status: 'active',
+      scope: campaignDraft.scope || 'city',
+      location: campaignDraft.location || 'Local Area',
+      daysTotal: campaignDraft.daysTotal || 1,
+      daysElapsed: 0,
+      daysLeft: campaignDraft.daysTotal || 1,
+      flatFee: campaignDraft.flatFee || 19,
+      impressions: 0,
+      engagements: 0,
+      budget: campaignDraft.budget || 19,
+      spend: 0,
+      justLaunched: true
+    };
+    CAMPAIGNS.unshift(mockCreated);
+    return mockCreated;
+  }
+}
+
+export async function getTipsConfigAsync(): Promise<typeof TIPS_CONFIG> {
+  try {
+    return await apiClient.get<typeof TIPS_CONFIG>('/skrimchat-monetization/tips');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/tips not ready. Returning mock.", err);
+    return TIPS_CONFIG;
+  }
+}
+
+export async function getPremiumConfigAsync(): Promise<typeof PREMIUM_CONFIG> {
+  try {
+    return await apiClient.get<typeof PREMIUM_CONFIG>('/skrimchat-monetization/premium');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/premium not ready. Returning mock.", err);
+    return PREMIUM_CONFIG;
+  }
+}
+
+export async function getSubscriptionConfigAsync(): Promise<typeof SUBSCRIPTION_CONFIG> {
+  try {
+    return await apiClient.get<typeof SUBSCRIPTION_CONFIG>('/skrimchat-monetization/subscriptions');
+  } catch (err) {
+    console.warn("TODO: Real backend GET /skrimchat-monetization/subscriptions not ready. Returning mock.", err);
+    return SUBSCRIPTION_CONFIG;
+  }
+}
+

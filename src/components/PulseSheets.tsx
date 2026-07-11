@@ -23,16 +23,28 @@ export function PulseCommentsSheet({
   const [commentInput, setCommentInput] = useState('');
   const [comments, setComments] = useState<PulseComment[]>([]);
   const [replyingTo, setReplyingTo] = useState<{ id: string; handle: string } | null>(null);
-  const postSettings = postId ? getPostModerationSettings(postId) : {};
-  const commentsDisabled = postSettings.commentsDisabled || false;
-  const postFilteredWords: string[] = postSettings.filteredWords || [];
+  const [commentsDisabled, setCommentsDisabled] = useState(false);
+  const [postFilteredWords, setPostFilteredWords] = useState<string[]>([]);
 
   useEffect(() => {
-    if (isOpen && postId) setComments(getPostComments(postId, postCommentCount));
+    const fetchComments = async () => {
+      if (isOpen && postId) {
+        const loaded = await getPostComments(postId, postCommentCount);
+        setComments(loaded);
+        try {
+          const settings = await getPostModerationSettings(postId);
+          setCommentsDisabled(settings.commentsDisabled || false);
+          setPostFilteredWords(settings.filteredWords || []);
+        } catch (e) {
+          console.error("Failed to load post moderation settings", e);
+        }
+      }
+    };
+    fetchComments();
     if (!isOpen) { setReplyingTo(null); setCommentInput(''); }
   }, [isOpen, postId, postCommentCount]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!commentInput.trim()) return;
     if (commentsDisabled) return;
     const lower = commentInput.toLowerCase();
@@ -55,7 +67,7 @@ export function PulseCommentsSheet({
       avatar: currentUser?.avatar || 'https://i.pravatar.cc/150?u=you',
     };
     setComments(prev => prev.some(c => c.id === newId) ? prev : [newComment, ...prev]);
-    addPostComment(postId, newComment);
+    await addPostComment(postId, newComment);
     setCommentInput('');
     setReplyingTo(null);
     onCommentAdded(newComment);
