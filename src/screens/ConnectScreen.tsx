@@ -284,6 +284,15 @@ export default function ConnectScreen() {
   const [tempAudioUrl, setTempAudioUrl] = useState<string | null>(null);
   const [recordedBase64, setRecordedBase64] = useState<string | null>(null);
   
+  // Cleanup object URL to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (tempAudioUrl) {
+        URL.revokeObjectURL(tempAudioUrl);
+      }
+    };
+  }, [tempAudioUrl]);
+  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<any>(null);

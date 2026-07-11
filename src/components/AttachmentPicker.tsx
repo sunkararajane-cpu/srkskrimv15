@@ -61,6 +61,25 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
   const [caption, setCaption] = useState('');
   const [filter, setFilter] = useState('Original');
   const [viewOnce, setViewOnce] = useState(false);
+
+  const createdUrlsRef = React.useRef<string[]>([]);
+  
+  const trackUrl = (url: string) => {
+    createdUrlsRef.current.push(url);
+    return url;
+  };
+
+  React.useEffect(() => {
+    return () => {
+      createdUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.warn('Failed to revoke URL:', err);
+        }
+      });
+    };
+  }, []);
   
   const renderContent = () => {
     switch (step) {
@@ -107,7 +126,7 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={async () => {
                 const files = await triggerNativeFilePicker({ accept: 'image/*', multiple: false });
                 if (files && files.length > 0) {
-                  const objectUrl = URL.createObjectURL(files[0]);
+                  const objectUrl = trackUrl(URL.createObjectURL(files[0]));
                   setSelectedItem({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true });
                   setStep('photo_preview');
                 }
@@ -115,7 +134,7 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={async () => {
                 const files = await triggerGalleryPicker({ accept: 'image/*', multiple: false });
                 if (files && files.length > 0) {
-                  const objectUrl = URL.createObjectURL(files[0]);
+                  const objectUrl = trackUrl(URL.createObjectURL(files[0]));
                   setSelectedItem({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true });
                   setStep('photo_preview');
                 }
@@ -224,7 +243,7 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={async () => {
                 const files = await triggerGalleryPicker({ accept: 'video/*', multiple: false });
                 if (files && files.length > 0) {
-                  const objectUrl = URL.createObjectURL(files[0]);
+                  const objectUrl = trackUrl(URL.createObjectURL(files[0]));
                   onSendVideo({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true, duration: '0:05' });
                   onClose();
                 }
@@ -263,7 +282,7 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
                 const files = await triggerNativeFilePicker({ accept: '*/*', multiple: false });
                 if (files && files.length > 0) {
                   const file = files[0];
-                  const objectUrl = URL.createObjectURL(file);
+                  const objectUrl = trackUrl(URL.createObjectURL(file));
                   const sizeKb = file.size / 1024;
                   const sizeLabel = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.round(sizeKb)} KB`;
                   const computedType = file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'file';
@@ -305,7 +324,7 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
                   const files = await triggerNativeFilePicker({ accept: 'audio/*', multiple: false });
                   if (files && files.length > 0) {
                     const file = files[0];
-                    const objectUrl = URL.createObjectURL(file);
+                    const objectUrl = trackUrl(URL.createObjectURL(file));
                     const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
                     onSendSong({
                       title: fileNameWithoutExt,
