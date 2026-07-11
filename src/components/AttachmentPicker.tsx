@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Camera, Image as ImageIcon, Video, Folder, Music, MapPin, X, File, Play, ChevronLeft, Gamepad2 } from 'lucide-react';
+import { triggerGalleryPicker } from '../lib/permissions/galleryPermission';
+import { triggerNativeFilePicker } from '../lib/permissions/filePicker';
 
 interface Props {
   onSendPhoto: (photo: any) => void;
@@ -59,58 +61,6 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
   const [caption, setCaption] = useState('');
   const [filter, setFilter] = useState('Original');
   const [viewOnce, setViewOnce] = useState(false);
-  const photoInputRef = React.useRef<HTMLInputElement>(null);
-  const videoInputRef = React.useRef<HTMLInputElement>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const songInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handlePhotoFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setSelectedItem({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true });
-    setStep('photo_preview');
-  };
-
-  const handleVideoFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    onSendVideo({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true, duration: '0:05' });
-    onClose();
-  };
-
-  const handleGenericFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    const sizeKb = file.size / 1024;
-    const sizeLabel = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.round(sizeKb)} KB`;
-    const computedType = file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'file';
-    onSendFile({ name: file.name, size: sizeLabel, uri: objectUrl, isUpload: true, fileType: computedType, type: computedType });
-    onClose();
-  };
-
-  const handleSongFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-    onSendSong({
-      title: fileNameWithoutExt,
-      movie: 'Local Audio',
-      artist: 'Uploaded',
-      duration: '3:00',
-      color: '#7B2FF7',
-      uri: objectUrl,
-      isUpload: true
-    });
-    onClose();
-  };
   
   const renderContent = () => {
     switch (step) {
@@ -154,10 +104,23 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={onClose} className="text-white/50"><X size={20}/></button>
             </div>
             <div className="p-4 flex gap-2">
-              <button onClick={() => { photoInputRef.current?.setAttribute('capture', 'environment'); photoInputRef.current?.click(); }} className="flex-1 py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Camera size={16}/> Camera</button>
-              <button onClick={() => { photoInputRef.current?.removeAttribute('capture'); photoInputRef.current?.click(); }} className="flex-1 py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><ImageIcon size={16}/> Gallery</button>
+              <button onClick={async () => {
+                const files = await triggerNativeFilePicker({ accept: 'image/*', multiple: false });
+                if (files && files.length > 0) {
+                  const objectUrl = URL.createObjectURL(files[0]);
+                  setSelectedItem({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true });
+                  setStep('photo_preview');
+                }
+              }} className="flex-1 py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Camera size={16}/> Camera</button>
+              <button onClick={async () => {
+                const files = await triggerGalleryPicker({ accept: 'image/*', multiple: false });
+                if (files && files.length > 0) {
+                  const objectUrl = URL.createObjectURL(files[0]);
+                  setSelectedItem({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true });
+                  setStep('photo_preview');
+                }
+              }} className="flex-1 py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><ImageIcon size={16}/> Gallery</button>
             </div>
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFilePicked} />
             <div className="px-4 pb-2 text-[10px] uppercase font-bold text-white/40 tracking-wider">Recent Photos</div>
             <div className="flex-1 overflow-y-auto px-4 pb-32">
                <div className="grid grid-cols-4 gap-2">
@@ -258,8 +221,14 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={onClose} className="text-white/50"><X size={20}/></button>
             </div>
             <div className="p-4">
-              <button onClick={() => videoInputRef.current?.click()} className="w-full py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Video size={16}/> Choose from Gallery</button>
-              <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFilePicked} />
+              <button onClick={async () => {
+                const files = await triggerGalleryPicker({ accept: 'video/*', multiple: false });
+                if (files && files.length > 0) {
+                  const objectUrl = URL.createObjectURL(files[0]);
+                  onSendVideo({ id: `upload-${Date.now()}`, uri: objectUrl, isUpload: true, duration: '0:05' });
+                  onClose();
+                }
+              }} className="w-full py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Video size={16}/> Choose from Gallery</button>
             </div>
             <div className="px-4 py-2 text-[10px] uppercase font-bold text-white/40 tracking-wider">Recent Videos</div>
             <div className="flex-1 overflow-y-auto px-4 pb-32">
@@ -290,8 +259,18 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
               <button onClick={onClose} className="text-white/50"><X size={20}/></button>
             </div>
             <div className="p-4">
-              <button onClick={() => fileInputRef.current?.click()} className="w-full py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Folder size={16}/> Browse Files</button>
-              <input ref={fileInputRef} type="file" className="hidden" onChange={handleGenericFilePicked} />
+              <button onClick={async () => {
+                const files = await triggerNativeFilePicker({ accept: '*/*', multiple: false });
+                if (files && files.length > 0) {
+                  const file = files[0];
+                  const objectUrl = URL.createObjectURL(file);
+                  const sizeKb = file.size / 1024;
+                  const sizeLabel = sizeKb > 1024 ? `${(sizeKb / 1024).toFixed(1)} MB` : `${Math.round(sizeKb)} KB`;
+                  const computedType = file.type.includes('pdf') ? 'pdf' : file.type.includes('image') ? 'image' : 'file';
+                  onSendFile({ name: file.name, size: sizeLabel, uri: objectUrl, isUpload: true, fileType: computedType, type: computedType });
+                  onClose();
+                }
+              }} className="w-full py-2 bg-white/10 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2"><Folder size={16}/> Browse Files</button>
             </div>
             <div className="px-4 py-2 text-[10px] uppercase font-bold text-white/40 tracking-wider">Recent Files</div>
             <div className="flex-1 overflow-y-auto px-4 pb-32">
@@ -322,12 +301,28 @@ export function AttachmentPicker({ onSendPhoto, onSendVideo, onSendFile, onSendS
             </div>
             <div className="p-4">
               <button 
-                onClick={() => songInputRef.current?.click()} 
+                onClick={async () => {
+                  const files = await triggerNativeFilePicker({ accept: 'audio/*', multiple: false });
+                  if (files && files.length > 0) {
+                    const file = files[0];
+                    const objectUrl = URL.createObjectURL(file);
+                    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                    onSendSong({
+                      title: fileNameWithoutExt,
+                      movie: 'Local Audio',
+                      artist: 'Uploaded',
+                      duration: '3:00',
+                      color: '#7B2FF7',
+                      uri: objectUrl,
+                      isUpload: true
+                    });
+                    onClose();
+                  }
+                }} 
                 className="w-full py-2 bg-white/10 hover:bg-white/15 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <Music size={16}/> Upload Audio File
               </button>
-              <input ref={songInputRef} type="file" accept="audio/*" className="hidden" onChange={handleSongFilePicked} />
             </div>
             <div className="px-4 py-1">
               <input type="text" placeholder="🔍 Search songs..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-neon-purple" />

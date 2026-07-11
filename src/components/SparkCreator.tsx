@@ -9,6 +9,7 @@ import { scanMedia } from '../lib/services/contentModeration';
 import { useModerationLogStore } from '../store/moderationLogStore';
 import { useSignalStore } from '../store/signalStore';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { triggerGalleryPicker } from '../lib/permissions/galleryPermission';
 
 // Resolves raw @handles typed into a Spark against mockUsers so a mention
 // signal can carry a real display name and avatar. Dedupes by handle
@@ -528,7 +529,31 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
               </div>
             </button>
 
-            <button onClick={() => galleryInputRef.current?.click()} className="w-full flex items-center gap-4 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all p-5 rounded-2xl border border-white/5 shadow-sm">
+            <button onClick={async () => {
+              const files = await triggerGalleryPicker();
+              if (files && files.length > 0) {
+                const file = files[0];
+                const isVideo = file.type.startsWith('video');
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                  let rawUrl = event.target?.result as string;
+                  if (!isVideo) {
+                    try {
+                      rawUrl = await compressImage(rawUrl);
+                    } catch (err) {
+                      console.error("Failed to compress image:", err);
+                    }
+                  }
+                  setSelectedMedia({
+                    type: isVideo ? 'video' : 'image',
+                    url: rawUrl,
+                    file: file
+                  });
+                  setMode('media');
+                };
+                reader.readAsDataURL(file);
+              }
+            }} className="w-full flex items-center gap-4 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all p-5 rounded-2xl border border-white/5 shadow-sm">
               <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#FF2D87]/20 to-[#FF8A00]/20 flex items-center justify-center shadow-inner">
                 <ImageIcon className="w-6 h-6 text-[#FF2D87]" />
               </div>

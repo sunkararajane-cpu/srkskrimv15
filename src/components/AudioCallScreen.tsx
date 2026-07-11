@@ -265,6 +265,16 @@ const AvatarRipples = ({
 
 const AudioCallScreen = () => {
   const store = useCallStore();
+
+  // Stop media tracks and end call immediately if the component unmounts
+  useEffect(() => {
+    return () => {
+      if (useCallStore.getState().isActive) {
+        useCallStore.getState().endCall();
+      }
+    };
+  }, []);
+
   const [showEncryptTooltip, setShowEncryptTooltip] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);

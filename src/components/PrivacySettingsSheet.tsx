@@ -15,7 +15,7 @@ interface Props {
   onClose: () => void;
 }
 
-type SubView = null | 'blocked' | 'muted' | 'follow_requests' | 'keyword_filters' | 'restricted' | 'hidden_words';
+type SubView = null | 'blocked' | 'muted' | 'follow_requests' | 'keyword_filters' | 'restricted' | 'hidden_words' | 'privacy_center';
 
 export const PrivacySettingsSheet = ({ onClose }: Props) => {
   const [isPrivate, setIsPrivate] = useState<boolean>(false);
@@ -155,6 +155,7 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                 : subView === 'keyword_filters' ? 'Keyword Filters'
                 : subView === 'restricted' ? 'Restricted Users'
                 : subView === 'hidden_words' ? 'Hidden Words'
+                : subView === 'privacy_center' ? 'Privacy Center'
                 : 'Privacy & Safety'}
             </h2>
           </div>
@@ -190,6 +191,28 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                   </button>
                 </div>
               </div>
+
+              {/* Privacy Center Button */}
+              <button
+                onClick={() => setSubView('privacy_center')}
+                className="flex items-center justify-between p-4 bg-gradient-to-r from-[#B026FF]/10 to-pink-500/5 hover:from-[#B026FF]/20 hover:to-pink-500/10 rounded-2xl border border-[#B026FF]/25 transition group text-left shadow-[0_0_15px_rgba(176,38,255,0.05)]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#B026FF]/20 flex items-center justify-center shrink-0">
+                    <Shield className="w-5 h-5 text-[#B026FF]" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white flex items-center gap-1.5">
+                      Privacy Center 
+                      <span className="text-[10px] bg-[#B026FF]/35 text-white px-1.5 py-0.5 rounded-full font-medium tracking-wide">JIT</span>
+                    </p>
+                    <p className="text-white/40 text-xs mt-0.5">
+                      See how we protect your microphone, camera, and location
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-white/70 transition" />
+              </button>
 
               {/* Sub-menu triggers */}
               <button
@@ -605,6 +628,74 @@ export const PrivacySettingsSheet = ({ onClose }: Props) => {
                 </div>
               ))}
             </>
+          )}
+
+          {subView === 'privacy_center' && (
+            <div className="flex flex-col gap-4">
+              <div className="bg-[#B026FF]/10 border border-[#B026FF]/20 rounded-2xl p-4 flex gap-3">
+                <Shield className="w-5 h-5 text-[#B026FF] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-bold text-sm">Just-In-Time Philosophy</h4>
+                  <p className="text-white/60 text-xs mt-1 leading-relaxed">
+                    We believe in zero trust and absolute control. Your device's sensitive resources (microphone, camera, location) are only requested when you actively trigger a feature. No background tracking, no pre-scanning, and immediate release.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* Camera & Mic */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center shrink-0">
+                    <span className="text-pink-400 font-bold text-sm">📷</span>
+                  </div>
+                  <div>
+                    <h5 className="text-white font-bold text-sm">Camera & Microphone</h5>
+                    <p className="text-white/55 text-xs mt-1 leading-relaxed">
+                      Only activated when you start a video/audio call or record a Spark. When the call or recording ends (or the view is closed), all hardware tracks are stopped immediately to guarantee your mic and camera are off.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                    <span className="text-green-400 font-bold text-sm">📍</span>
+                  </div>
+                  <div>
+                    <h5 className="text-white font-bold text-sm">Location Services</h5>
+                    <p className="text-white/55 text-xs mt-1 leading-relaxed">
+                      We never trace your movements in the background. Your precise location is only requested when using active localized search (like Orbit). Updates stop instantly the moment you navigate away or close the screen.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Gallery */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <span className="text-blue-400 font-bold text-sm">🖼️</span>
+                  </div>
+                  <div>
+                    <h5 className="text-white font-bold text-sm">Native Media Gallery</h5>
+                    <p className="text-white/55 text-xs mt-1 leading-relaxed">
+                      Unlike other social apps, we do not require permission to "scan" your entire camera roll. Every file is chosen through your operating system's native picker, meaning the app only sees files you explicitly select.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Temp Files */}
+                <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                    <span className="text-purple-400 font-bold text-sm">🗑️</span>
+                  </div>
+                  <div>
+                    <h5 className="text-white font-bold text-sm">Ephemeral Local Media</h5>
+                    <p className="text-white/55 text-xs mt-1 leading-relaxed">
+                      Any temporary files or memory blobs created during camera capture or voice recording are strictly short-lived. They are immediately released from memory once successfully uploaded to secure storage.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

@@ -106,6 +106,15 @@ const Particles = () => {
 export default function VideoCallScreen() {
   const store = useCallStore();
 
+  // Stop media tracks and end call immediately if the component unmounts
+  useEffect(() => {
+    return () => {
+      if (useCallStore.getState().isActive) {
+        useCallStore.getState().endCall();
+      }
+    };
+  }, []);
+
   const [showEncryptTooltip, setShowEncryptTooltip] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showControls, setShowControls] = useState(true);
