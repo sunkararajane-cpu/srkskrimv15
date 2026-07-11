@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, X } from 'lucide-react';
 import { AvatarWithRing } from './ui';
@@ -19,18 +19,34 @@ interface MessageRequestSheetProps {
   onRequestSent: () => void;
 }
 
-const SUGGESTIONS = [
-  "👋 Hey!",
-  "🔥 Love your work",
-  "😂 Your posts 💀",
-  "🤝 Let's connect!",
-  "👋 Namaste!",
-  "🔥 Teri posts fire hain!"
-];
-
 export function MessageRequestSheet({ isOpen, onClose, targetUser, currentUser, onRequestSent }: MessageRequestSheetProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [asyncSuggestions, setAsyncSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      let active = true;
+      setLoadingSuggestions(true);
+      const load = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (active) {
+          setAsyncSuggestions([
+            "👋 Hey!",
+            "🔥 Love your work",
+            "😂 Your posts 💀",
+            "🤝 Let's connect!",
+            "👋 Namaste!",
+            "🔥 Teri posts fire hain!"
+          ]);
+          setLoadingSuggestions(false);
+        }
+      };
+      load();
+      return () => { active = false; };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -127,20 +143,27 @@ export function MessageRequestSheet({ isOpen, onClose, targetUser, currentUser, 
               <p className="text-xs font-semibold text-gray-400 mb-2 ml-1 flex items-center gap-1">
                 💡 Quick intro suggestions
               </p>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 hide-scroll-bar">
-                {SUGGESTIONS.map((sug, i) => (
-                  <button 
-                    key={i}
-                    onClick={() => {
-                       if ((message.length + sug.length + 1) <= maxChars) {
-                         setMessage(prev => prev ? `${prev} ${sug}` : sug);
-                       }
-                    }}
-                    className="shrink-0 px-4 py-2 rounded-full border border-neon-purple/50 bg-white/5 text-white text-xs font-medium hover:bg-neon-purple/20 transition-colors active:scale-95 whitespace-nowrap"
-                  >
-                    {sug}
-                  </button>
-                ))}
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 hide-scroll-bar min-h-[36px] items-center">
+                {loadingSuggestions ? (
+                  <div className="flex items-center gap-2 py-1">
+                    <div className="w-4 h-4 rounded-full border border-white/20 border-t-[#B026FF] animate-spin" />
+                    <span className="text-[10px] text-gray-500 font-mono">LOADING SUGGESTIONS...</span>
+                  </div>
+                ) : (
+                  asyncSuggestions.map((sug, i) => (
+                    <button 
+                      key={i}
+                      onClick={() => {
+                         if ((message.length + sug.length + 1) <= maxChars) {
+                           setMessage(prev => prev ? `${prev} ${sug}` : sug);
+                         }
+                      }}
+                      className="shrink-0 px-4 py-2 rounded-full border border-[#B026FF]/50 bg-white/5 text-white text-xs font-medium hover:bg-[#B026FF]/20 transition-colors active:scale-95 whitespace-nowrap"
+                    >
+                      {sug}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 

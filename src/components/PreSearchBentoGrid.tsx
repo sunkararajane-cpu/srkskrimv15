@@ -111,18 +111,32 @@ export function PreSearchBentoGrid({
     return [...allWorlds].sort((a, b) => (b.members || 0) - (a.members || 0)).slice(0, 3);
   }, [allWorlds]);
 
-  // Rising creators
-  const risingCreators = React.useMemo(() => {
-    const languages = ["Telugu", "Hindi", "Tamil", "English"];
-    const regions = ["Andhra", "Maharashtra", "Tamil Nadu", "Karnataka"];
-    return mockUsers.slice(0, 6).map((u, i) => ({
-      ...u,
-      name: u.displayName,
-      handle: `@${u.username}`,
-      creatorLanguage: languages[i % languages.length],
-      creatorRegion: regions[i % regions.length],
-      followers: 14500 + i * 3200,
-    }));
+  // Rising creators loaded asynchronously
+  const [asyncCreators, setAsyncCreators] = useState<any[]>([]);
+  const [loadingCreators, setLoadingCreators] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingCreators(true);
+    const load = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (active) {
+        const languages = ["Telugu", "Hindi", "Tamil", "English"];
+        const regions = ["Andhra", "Maharashtra", "Tamil Nadu", "Karnataka"];
+        const mapped = mockUsers.slice(0, 6).map((u, i) => ({
+          ...u,
+          name: u.displayName,
+          handle: `@${u.username}`,
+          creatorLanguage: languages[i % languages.length],
+          creatorRegion: regions[i % regions.length],
+          followers: 14500 + i * 3200,
+        }));
+        setAsyncCreators(mapped);
+        setLoadingCreators(false);
+      }
+    };
+    load();
+    return () => { active = false; };
   }, []);
 
   // Track progress simulator
@@ -427,41 +441,54 @@ export function PreSearchBentoGrid({
         </div>
 
         {/* CARD 4: TOP CREATOR SPOTLIGHT (1x1) */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          onClick={() => navigate(`/profile/${risingCreators[0].username}`)}
-          className="col-span-1 aspect-square rounded-3xl bg-neutral-900/60 border border-white/5 hover:border-[#00F0FF]/30 p-3.5 flex flex-col justify-between shadow-[0_0_20px_rgba(0,0,0,0.4)] cursor-pointer relative overflow-hidden"
-          id="creator-spotlight-card"
-        >
-          {/* Neon Ring Background Glow */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(176,38,255,0.08)_0%,_transparent_70%)]" />
-
-          <div className="flex items-center justify-between">
-            <span className="text-[8px] font-black tracking-wider text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-0.5 rounded-full uppercase">
-              Spotlight
-            </span>
-            <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-          </div>
-
-          <div className="flex flex-col items-center text-center py-1">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#B026FF] to-[#00F0FF] animate-spin blur-[2px] opacity-70" />
-              <img
-                src={risingCreators[0].avatar}
-                alt="Top Creator"
-                className="w-10 h-10 rounded-full border-2 border-[#0A0A0A] relative z-10 object-cover"
-              />
+        {loadingCreators ? (
+          <div className="col-span-1 aspect-square rounded-3xl bg-neutral-900/60 border border-white/5 p-3.5 flex flex-col justify-between overflow-hidden relative">
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            <div className="w-12 h-3 bg-white/10 rounded" />
+            <div className="flex flex-col items-center gap-2 py-1">
+              <div className="w-10 h-10 rounded-full bg-white/10" />
+              <div className="w-16 h-2.5 bg-white/10 rounded" />
+              <div className="w-10 h-2 bg-white/10 rounded" />
             </div>
-            <span className="text-white font-bold text-[11px] mt-1.5 truncate max-w-full">
-              {risingCreators[0].displayName}
-            </span>
-            <span className="text-white/40 text-[9px]">@{risingCreators[0].username}</span>
+            <div className="w-12 h-2 mx-auto bg-white/10 rounded" />
           </div>
+        ) : (
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            onClick={() => navigate(`/profile/${asyncCreators[0].username}`)}
+            className="col-span-1 aspect-square rounded-3xl bg-neutral-900/60 border border-white/5 hover:border-[#00F0FF]/30 p-3.5 flex flex-col justify-between shadow-[0_0_20px_rgba(0,0,0,0.4)] cursor-pointer relative overflow-hidden"
+            id="creator-spotlight-card"
+          >
+            {/* Neon Ring Background Glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(176,38,255,0.08)_0%,_transparent_70%)]" />
 
-          <div className="text-center text-[8px] font-bold text-[#00F0FF] tracking-wider uppercase">
-            {(risingCreators[0].followers / 1000).toFixed(1)}K Fans
-          </div>
-        </motion.div>
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-black tracking-wider text-[#00F0FF] bg-[#00F0FF]/10 px-2 py-0.5 rounded-full uppercase">
+                Spotlight
+              </span>
+              <Trophy className="w-3.5 h-3.5 text-yellow-500" />
+            </div>
+
+            <div className="flex flex-col items-center text-center py-1">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#B026FF] to-[#00F0FF] animate-spin blur-[2px] opacity-70" />
+                <img
+                  src={asyncCreators[0].avatar}
+                  alt="Top Creator"
+                  className="w-10 h-10 rounded-full border-2 border-[#0A0A0A] relative z-10 object-cover"
+                />
+              </div>
+              <span className="text-white font-bold text-[11px] mt-1.5 truncate max-w-full">
+                {asyncCreators[0].displayName}
+              </span>
+              <span className="text-white/40 text-[9px]">@{asyncCreators[0].username}</span>
+            </div>
+
+            <div className="text-center text-[8px] font-bold text-[#00F0FF] tracking-wider uppercase">
+              {(asyncCreators[0].followers / 1000).toFixed(1)}K Fans
+            </div>
+          </motion.div>
+        )}
 
         {/* CARD 5: SECONDARY HOT VIBE (1x1) */}
         <motion.div
@@ -523,62 +550,74 @@ export function PreSearchBentoGrid({
 
           {/* Horizontal scroll of users */}
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-            {risingCreators.slice(1).map((creator) => {
-              const username = getCleanUsername(creator.handle);
-              const isUserFollowing =
-                followToggleState[username] !== undefined
-                  ? followToggleState[username]
-                  : isFollowing(username);
-
-              return (
-                <div
-                  key={creator.id}
-                  onClick={() => navigate(`/profile/${username}`)}
-                  className="flex flex-col items-center text-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-2.5 shrink-0 w-24 cursor-pointer transition-all relative group"
-                >
-                  <div className="relative">
-                    {/* Glowing ring */}
-                    <div
-                      className={`absolute -inset-1 rounded-full bg-gradient-to-r from-[#B026FF] to-[#00F0FF] opacity-0 group-hover:opacity-60 blur-[1px] transition-opacity`}
-                    />
-                    <img
-                      src={creator.avatar}
-                      alt={creator.name}
-                      className="w-10 h-10 rounded-full border border-neutral-800 object-cover bg-neutral-900 relative z-10"
-                    />
-                  </div>
-
-                  <span className="text-white text-[9px] font-bold mt-2 truncate w-full">
-                    {creator.displayName}
-                  </span>
-                  <span className="text-white/40 text-[7px] truncate w-full">
-                    {creator.handle}
-                  </span>
-
-                  {/* Follow button */}
-                  <button
-                    onClick={(e) => handleFollowClick(e, username)}
-                    className={`mt-2 w-full py-1 rounded-full text-[8px] font-black transition-all flex items-center justify-center gap-0.5 ${
-                      isUserFollowing
-                        ? "bg-white/10 text-white/50 border border-white/10"
-                        : "bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-black shadow-[0_0_8px_rgba(0,240,255,0.3)]"
-                    }`}
-                  >
-                    {isUserFollowing ? (
-                      <>
-                        <UserCheck className="w-2 h-2" />
-                        <span>Joined</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-2.5 h-2.5" />
-                        <span>Hype</span>
-                      </>
-                    )}
-                  </button>
+            {loadingCreators ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center text-center bg-white/5 border border-white/5 rounded-2xl p-2.5 shrink-0 w-24 relative overflow-hidden">
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+                  <div className="w-10 h-10 rounded-full bg-white/10" />
+                  <div className="w-12 h-2 bg-white/10 rounded mt-2" />
+                  <div className="w-8 h-1.5 bg-white/10 rounded mt-1" />
+                  <div className="w-16 h-4 bg-white/10 rounded mt-2" />
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              asyncCreators.slice(1).map((creator) => {
+                const username = getCleanUsername(creator.handle);
+                const isUserFollowing =
+                  followToggleState[username] !== undefined
+                    ? followToggleState[username]
+                    : isFollowing(username);
+
+                return (
+                  <div
+                    key={creator.id}
+                    onClick={() => navigate(`/profile/${username}`)}
+                    className="flex flex-col items-center text-center bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-2.5 shrink-0 w-24 cursor-pointer transition-all relative group"
+                  >
+                    <div className="relative">
+                      {/* Glowing ring */}
+                      <div
+                        className={`absolute -inset-1 rounded-full bg-gradient-to-r from-[#B026FF] to-[#00F0FF] opacity-0 group-hover:opacity-60 blur-[1px] transition-opacity`}
+                      />
+                      <img
+                        src={creator.avatar}
+                        alt={creator.name}
+                        className="w-10 h-10 rounded-full border border-neutral-800 object-cover bg-neutral-900 relative z-10"
+                      />
+                    </div>
+
+                    <span className="text-white text-[9px] font-bold mt-2 truncate w-full">
+                      {creator.displayName}
+                    </span>
+                    <span className="text-white/40 text-[7px] truncate w-full">
+                      {creator.handle}
+                    </span>
+
+                    {/* Follow button */}
+                    <button
+                      onClick={(e) => handleFollowClick(e, username)}
+                      className={`mt-2 w-full py-1 rounded-full text-[8px] font-black transition-all flex items-center justify-center gap-0.5 ${
+                        isUserFollowing
+                          ? "bg-white/10 text-white/50 border border-white/10"
+                          : "bg-[#00F0FF] hover:bg-[#00F0FF]/90 text-black shadow-[0_0_8px_rgba(0,240,255,0.3)]"
+                      }`}
+                    >
+                      {isUserFollowing ? (
+                        <>
+                          <UserCheck className="w-2 h-2" />
+                          <span>Joined</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-2.5 h-2.5" />
+                          <span>Hype</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 

@@ -17,12 +17,32 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
   const [invitedChats, setInvitedChats] = useState<Record<string, boolean>>({});
   const [showSignal, setShowSignal] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState('');
+  const [loadingChats, setLoadingChats] = useState(false);
+  const [asyncChats, setAsyncChats] = useState<any[]>([]);
 
   useEffect(() => {
     // Generate a unique refer/invite code link
     const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
     setInviteLink(`${window.location.origin}/games/${gameId}?ref=${randomCode}`);
   }, [gameId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      let active = true;
+      setLoadingChats(true);
+      const load = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (active) {
+          setAsyncChats(MOCK_CHATS);
+          setLoadingChats(false);
+        }
+      };
+      load();
+      return () => { active = false; };
+    } else {
+      setAsyncChats([]);
+    }
+  }, [isOpen]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -196,57 +216,64 @@ export function GameInviteModal({ isOpen, onClose, gameId, gameLabel, gameEmoji 
                 <Users className="w-3.5 h-3.5 text-[#B026FF]" /> Invite through Connect Chat
               </h4>
               
-              <div className="space-y-2.5 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
-                {MOCK_CHATS.map((chat) => (
-                  <div 
-                    key={chat.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="relative w-9 h-9 shrink-0">
-                        {chat.isGroup ? (
-                          <div className="relative w-full h-full">
-                            <img src={chat.avatar2 || null} className="w-6 h-6 rounded-full absolute top-0 right-0 border border-black bg-zinc-800" />
-                            <img src={chat.avatar || null} className="w-6 h-6 rounded-full absolute bottom-0 left-0 border border-black bg-zinc-700" />
-                          </div>
+              <div className="space-y-2.5 max-h-[220px] overflow-y-auto no-scrollbar pr-1 min-h-[120px] flex flex-col justify-center">
+                {loadingChats ? (
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-[#B026FF] animate-spin mb-2" />
+                    <p className="text-[10px] text-white/40 font-mono tracking-wider">RETRIEVING CONTACTS...</p>
+                  </div>
+                ) : (
+                  asyncChats.map((chat) => (
+                    <div 
+                      key={chat.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="relative w-9 h-9 shrink-0">
+                          {chat.isGroup ? (
+                            <div className="relative w-full h-full">
+                              <img src={chat.avatar2 || null} className="w-6 h-6 rounded-full absolute top-0 right-0 border border-black bg-zinc-800" />
+                              <img src={chat.avatar || null} className="w-6 h-6 rounded-full absolute bottom-0 left-0 border border-black bg-zinc-700" />
+                            </div>
+                          ) : (
+                            <>
+                              <img src={chat.avatar || null} className="w-full h-full rounded-full bg-white/10" />
+                              {chat.online && (
+                                <div className="absolute right-0 bottom-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-[#0F0F1A]" />
+                              )}
+                            </>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-white font-bold text-xs truncate">{chat.name}</p>
+                          <p className="text-white/40 text-[9px] uppercase tracking-wider font-semibold">
+                            {chat.isGroup ? 'Group Chat' : (chat.online ? 'Online' : 'Offline')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleInviteChat(chat)}
+                        disabled={invitedChats[chat.id]}
+                        className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
+                          invitedChats[chat.id]
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default'
+                            : 'bg-gradient-to-r from-[#00F0FF]/10 to-[#B026FF]/10 border border-white/10 text-white hover:border-white/20 active:scale-95'
+                        }`}
+                      >
+                        {invitedChats[chat.id] ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Sent ✓
+                          </>
                         ) : (
                           <>
-                            <img src={chat.avatar || null} className="w-full h-full rounded-full bg-white/10" />
-                            {chat.online && (
-                              <div className="absolute right-0 bottom-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-[#0F0F1A]" />
-                            )}
+                            <Send className="w-3.5 h-3.5" /> Invite
                           </>
                         )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-white font-bold text-xs truncate">{chat.name}</p>
-                        <p className="text-white/40 text-[9px] uppercase tracking-wider font-semibold">
-                          {chat.isGroup ? 'Group Chat' : (chat.online ? 'Online' : 'Offline')}
-                        </p>
-                      </div>
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => handleInviteChat(chat)}
-                      disabled={invitedChats[chat.id]}
-                      className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
-                        invitedChats[chat.id]
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default'
-                          : 'bg-gradient-to-r from-[#00F0FF]/10 to-[#B026FF]/10 border border-white/10 text-white hover:border-white/20 active:scale-95'
-                      }`}
-                    >
-                      {invitedChats[chat.id] ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Sent ✓
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-3.5 h-3.5" /> Invite
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

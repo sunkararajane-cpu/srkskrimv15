@@ -268,6 +268,41 @@ const AudioCallScreen = () => {
   const [showEncryptTooltip, setShowEncryptTooltip] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [asyncFollowers, setAsyncFollowers] = useState<string[]>([]);
+  const [asyncFollowing, setAsyncFollowing] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (showAddUserModal) {
+      let active = true;
+      setLoadingParticipants(true);
+      const load = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (active) {
+          let f: string[] = ["sunita_not_astronaut", "chikoo_bhai_official", "munni_badnaam_nahi", "dolly_ka_dhaba"];
+          let fol: string[] = ["bappu_bhai", "bablu_ka_garage", "golu_fitness_goals", "pappu_pass_hogaya"];
+          try {
+            const dataF = localStorage.getItem("skrimchat_followers");
+            if (dataF) {
+              const parsed = JSON.parse(dataF);
+              if (Array.isArray(parsed)) f = parsed;
+            }
+            const dataFol = localStorage.getItem("skrimchat_following");
+            if (dataFol) {
+              const parsed = JSON.parse(dataFol);
+              if (Array.isArray(parsed)) fol = parsed;
+            }
+          } catch (e) {}
+          setAsyncFollowers(f);
+          setAsyncFollowing(fol);
+          setLoadingParticipants(false);
+        }
+      };
+      load();
+      return () => { active = false; };
+    }
+  }, [showAddUserModal]);
+
   const [activeTab, setActiveTab] = useState<"connect" | "followers" | "following">("connect");
   const [searchQuery, setSearchQuery] = useState("");
   const [addedToast, setAddedToast] = useState<string | null>(null);
@@ -792,138 +827,123 @@ const AudioCallScreen = () => {
 
                 {/* User List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-[250px] max-h-[400px]">
-                  {(() => {
-                    let list: any[] = [];
-                    if (activeTab === "connect") {
-                      list = MOCK_CHATS.filter(c => !c.isGroup).map(c => ({
-                        id: c.id,
-                        name: c.name,
-                        username: c.username || "",
-                        avatar: c.avatar,
-                      }));
-                    } else if (activeTab === "followers") {
-                      let followers: string[] = [];
-                      try {
-                        const data = localStorage.getItem("skrimchat_followers");
-                        if (data) {
-                          const parsed = JSON.parse(data);
-                          if (Array.isArray(parsed)) followers = parsed;
-                        }
-                      } catch (e) {}
-                      if (followers.length === 0) {
-                        followers = ["sunita_not_astronaut", "chikoo_bhai_official", "munni_badnaam_nahi", "dolly_ka_dhaba"];
+                  {loadingParticipants ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-[#B026FF] animate-spin mb-3" />
+                      <p className="text-[11px] text-gray-500 font-mono tracking-wider">RETRIEVING USERS...</p>
+                    </div>
+                  ) : (
+                    (() => {
+                      let list: any[] = [];
+                      if (activeTab === "connect") {
+                        list = MOCK_CHATS.filter(c => !c.isGroup).map(c => ({
+                          id: c.id,
+                          name: c.name,
+                          username: c.username || "",
+                          avatar: c.avatar,
+                        }));
+                      } else if (activeTab === "followers") {
+                        list = asyncFollowers.map(uname => {
+                          const mu = mockUsers.find(u => u.username === uname);
+                          return mu ? {
+                            id: mu.id,
+                            name: mu.displayName,
+                            username: mu.username,
+                            avatar: mu.avatar,
+                          } : {
+                            id: uname,
+                            name: uname,
+                            username: uname,
+                            avatar: `https://i.pravatar.cc/150?u=${uname}`,
+                          };
+                        });
+                      } else if (activeTab === "following") {
+                        list = asyncFollowing.map(uname => {
+                          const mu = mockUsers.find(u => u.username === uname);
+                          return mu ? {
+                            id: mu.id,
+                            name: mu.displayName,
+                            username: mu.username,
+                            avatar: mu.avatar,
+                          } : {
+                            id: uname,
+                            name: uname,
+                            username: uname,
+                            avatar: `https://i.pravatar.cc/150?u=${uname}`,
+                          };
+                        });
                       }
-                      list = followers.map(uname => {
-                        const mu = mockUsers.find(u => u.username === uname);
-                        return mu ? {
-                          id: mu.id,
-                          name: mu.displayName,
-                          username: mu.username,
-                          avatar: mu.avatar,
-                        } : {
-                          id: uname,
-                          name: uname,
-                          username: uname,
-                          avatar: `https://i.pravatar.cc/150?u=${uname}`,
-                        };
-                      });
-                    } else if (activeTab === "following") {
-                      let following: string[] = [];
-                      try {
-                        const data = localStorage.getItem("skrimchat_following");
-                        if (data) {
-                          const parsed = JSON.parse(data);
-                          if (Array.isArray(parsed)) following = parsed;
-                        }
-                      } catch (e) {}
-                      if (following.length === 0) {
-                        following = ["bappu_bhai", "bablu_ka_garage", "golu_fitness_goals", "pappu_pass_hogaya"];
+
+                      // Filter by Search Query
+                      if (searchQuery.trim()) {
+                        const q = searchQuery.toLowerCase();
+                        list = list.filter(u => 
+                          u.name.toLowerCase().includes(q) || 
+                          u.username.toLowerCase().includes(q)
+                        );
                       }
-                      list = following.map(uname => {
-                        const mu = mockUsers.find(u => u.username === uname);
-                        return mu ? {
-                          id: mu.id,
-                          name: mu.displayName,
-                          username: mu.username,
-                          avatar: mu.avatar,
-                        } : {
-                          id: uname,
-                          name: uname,
-                          username: uname,
-                          avatar: `https://i.pravatar.cc/150?u=${uname}`,
-                        };
-                      });
-                    }
 
-                    // Filter by Search Query
-                    if (searchQuery.trim()) {
-                      const q = searchQuery.toLowerCase();
-                      list = list.filter(u => 
-                        u.name.toLowerCase().includes(q) || 
-                        u.username.toLowerCase().includes(q)
-                      );
-                    }
-
-                    if (list.length === 0) {
-                      return (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-8">
-                          <p className="text-white/40 text-sm">No users found</p>
-                        </div>
-                      );
-                    }
-
-                    return list.map((user) => {
-                      const isAlreadyAdded = store.addedContacts.some(c => c.id === user.id || c.name === user.name);
-                      const isMainParticipant = store.contact?.id === user.id || store.contact?.name === user.name;
-                      
-                      return (
-                        <button
-                          key={user.id}
-                          disabled={isAlreadyAdded || isMainParticipant}
-                          onClick={() => {
-                            store.addContact({
-                              id: user.id,
-                              name: user.name,
-                              avatar: user.avatar,
-                            });
-                            setAddedToast(`${user.name} added to call ⚡`);
-                            setTimeout(() => setAddedToast(null), 3000);
-                          }}
-                          className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all border text-left ${
-                            isAlreadyAdded || isMainParticipant
-                              ? "bg-white/[0.01] border-transparent opacity-50 cursor-not-allowed"
-                              : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.98]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <img
-                              src={user.avatar || null}
-                              alt={user.name}
-                              className="w-10 h-10 rounded-full object-cover border border-white/10"
-                            />
-                            <div className="min-w-0">
-                              <div className="text-white font-semibold text-sm truncate">{user.name}</div>
-                              <div className="text-white/40 text-xs truncate">@{user.username}</div>
-                            </div>
+                      if (list.length === 0) {
+                        return (
+                          <div className="h-full flex flex-col items-center justify-center text-center py-8">
+                            <p className="text-white/40 text-sm">No users found</p>
                           </div>
+                        );
+                      }
 
-                          {isMainParticipant ? (
-                            <span className="text-xs text-[#B026FF] font-medium bg-[#B026FF]/10 px-2.5 py-1 rounded-full border border-[#B026FF]/20">
-                              Host/Active
-                            </span>
-                          ) : isAlreadyAdded ? (
-                            <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                              <Check size={14} />
+                      return list.map((user) => {
+                        const isAlreadyAdded = store.addedContacts.some(c => c.id === user.id || c.name === user.name);
+                        const isMainParticipant = store.contact?.id === user.id || store.contact?.name === user.name;
+                        
+                        return (
+                          <button
+                            key={user.id}
+                            disabled={isAlreadyAdded || isMainParticipant}
+                            onClick={() => {
+                              store.addContact({
+                                id: user.id,
+                                name: user.name,
+                                avatar: user.avatar,
+                              });
+                              setAddedToast(`${user.name} added to call ⚡`);
+                              setTimeout(() => setAddedToast(null), 3000);
+                            }}
+                            className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all border text-left ${
+                              isAlreadyAdded || isMainParticipant
+                                ? "bg-white/[0.01] border-transparent opacity-50 cursor-not-allowed"
+                                : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 active:scale-[0.98]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <img
+                                src={user.avatar || null}
+                                alt={user.name}
+                                className="w-10 h-10 rounded-full object-cover border border-white/10"
+                              />
+                              <div className="min-w-0">
+                                <div className="text-white font-semibold text-sm truncate">{user.name}</div>
+                                <div className="text-white/40 text-xs truncate">@{user.username}</div>
+                              </div>
                             </div>
-                          ) : (
-                            <span className="text-xs text-white/60 font-semibold bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all">
-                              Add
-                            </span>
-                          )}
-                        </button>
-                      );
-                    });
-                  })()}
+
+                            {isMainParticipant ? (
+                              <span className="text-xs text-[#B026FF] font-medium bg-[#B026FF]/10 px-2.5 py-1 rounded-full border border-[#B026FF]/20">
+                                Host/Active
+                              </span>
+                            ) : isAlreadyAdded ? (
+                              <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                                <Check size={14} />
+                              </div>
+                            ) : (
+                              <span className="text-xs text-white/60 font-semibold bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-full transition-all">
+                                Add
+                              </span>
+                            )}
+                          </button>
+                        );
+                      });
+                    })()
+                  )}
                 </div>
               </motion.div>
             </div>

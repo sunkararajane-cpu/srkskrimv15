@@ -9,11 +9,10 @@ interface SparkRowProps {
   onAddSpark: () => void;
   currentUser: any;
   activeUserId?: string;
+  loading?: boolean;
 }
 
-export function SparkRow({ sparks, onSparkClick, onAddSpark, currentUser, activeUserId }: SparkRowProps) {
-  // Sort other sparks so unviewed sparks are placed at the front, and viewed ones are placed at the back (never hidden/faded out completely)
-
+export function SparkRow({ sparks, onSparkClick, onAddSpark, currentUser, activeUserId, loading = false }: SparkRowProps) {
   const getEnergyColor = (energy: SparkEnergy) => {
     switch (energy) {
       case 'COLD': return 'from-cyan-500 to-blue-500';
@@ -40,7 +39,6 @@ export function SparkRow({ sparks, onSparkClick, onAddSpark, currentUser, active
   const otherSparks = sparks.filter(s => !s.isOwn);
   const firstOwnSpark = ownSparks[0];
 
-  // Sort other sparks so unviewed sparks are placed at the front, and viewed ones are placed at the back (never hidden/faded out completely)
   const sortedOtherSparks = [...otherSparks].sort((a, b) => {
     const aViewed = !!a.hasViewed;
     const bViewed = !!b.hasViewed;
@@ -105,127 +103,127 @@ export function SparkRow({ sparks, onSparkClick, onAddSpark, currentUser, active
       </motion.div>
 
       {/* Sparks */}
-      {sortedOtherSparks.map((spark, index) => {
-         const latestSpark = spark.sparks?.[0] || {};
-         const hasViewed = spark.hasViewed;
-         const isNova = latestSpark.energy === 'NOVA';
-         
-         const now = Date.now();
-         const timeLeft = (latestSpark.expiresAt || 0) - now;
-         
-         let isExpiringSoon = false;
-         let isExpiringVerySoon = false;
-         let isExpiringImminent = false;
-         let countdownText = null;
+      {loading ? (
+        Array.from({ length: 4 }).map((_, i) => (
+          <div key={`spark-skeleton-${i}`} className="flex flex-col items-center gap-1 min-w-[72px] shrink-0 animate-pulse">
+            <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-white/5" />
+            </div>
+            <div className="h-2 w-10 bg-white/10 rounded mt-2" />
+          </div>
+        ))
+      ) : (
+        sortedOtherSparks.map((spark, index) => {
+          const latestSpark = spark.sparks?.[0] || {};
+          const hasViewed = spark.hasViewed;
+          const isNova = latestSpark.energy === 'NOVA';
+          
+          const now = Date.now();
+          const timeLeft = (latestSpark.expiresAt || 0) - now;
+          
+          let isExpiringSoon = false;
+          let isExpiringVerySoon = false;
+          let isExpiringImminent = false;
+          let countdownText = null;
 
-         if (timeLeft > 0 && timeLeft < 60 * 60 * 1000) {
-           isExpiringSoon = true;
-           const mins = Math.max(1, Math.floor(timeLeft / 60000));
-           countdownText = `${mins}m`;
-           
-           if (mins < 10) isExpiringVerySoon = true;
-           if (mins < 1) {
-             isExpiringImminent = true;
-             countdownText = "< 1m";
-           }
-         }
-         
-         const sparkEnergy = latestSpark.energy || 'COLD';
-         let ringClass = hasViewed ? 'bg-white/20' : 'bg-gradient-to-tr ' + getEnergyColor(sparkEnergy);
-         let ringStyle: any = {
-           animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite`,
-           boxShadow: isNova && !hasViewed ? '0 0 15px rgba(255, 107, 0, 0.6)' : 'none'
-         };
+          if (timeLeft > 0 && timeLeft < 60 * 60 * 1000) {
+            isExpiringSoon = true;
+            const mins = Math.max(1, Math.floor(timeLeft / 60000));
+            countdownText = `${mins}m`;
+            
+            if (mins < 10) isExpiringVerySoon = true;
+            if (mins < 1) {
+              isExpiringImminent = true;
+              countdownText = "< 1m";
+            }
+          }
+          
+          const sparkEnergy = latestSpark.energy || 'COLD';
+          let ringClass = hasViewed ? 'bg-white/20' : 'bg-gradient-to-tr ' + getEnergyColor(sparkEnergy);
+          let ringStyle: any = {
+            animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite`,
+            boxShadow: isNova && !hasViewed ? '0 0 15px rgba(255, 107, 0, 0.6)' : 'none'
+          };
 
-         if (isExpiringSoon && !hasViewed) {
-           ringClass = isExpiringVerySoon ? 'bg-red-500' : 'bg-orange-500';
-           if (isExpiringImminent) {
-             ringStyle.animation = 'flashRing 0.5s infinite alternate';
-           }
-         }
+          if (isExpiringSoon && !hasViewed) {
+            ringClass = isExpiringVerySoon ? 'bg-red-500' : 'bg-orange-500';
+            if (isExpiringImminent) {
+              ringStyle.animation = 'flashRing 0.5s infinite alternate';
+            }
+          }
 
-         return (
-           <motion.div
-             key={`spark-row-item-${spark.id || spark.userId || index}_${index}`}
-             initial={{ scale: 0, opacity: 0 }}
-             animate={{ scale: 1, opacity: 1, filter: hasViewed ? 'grayscale(0.3)' : 'grayscale(0)' }}
-             transition={{ type: "spring", damping: 15, delay: index * 0.05 + 0.1 }}
-             onClick={() => onSparkClick(spark)}
-             className={`flex flex-col items-center gap-1 min-w-[72px] shrink-0 cursor-pointer group relative ${activeUserId === spark.userId ? 'scale-110 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''} transition-all duration-300`}
-           >
-             <div className="relative">
-               {latestSpark.isCollab ? (
-                  <div className={`relative w-[60px] h-[36px] flex items-center justify-start mt-2 mb-2 ${latestSpark.status === 'pending' ? 'opacity-60' : ''}`}>
-                    <div className={`w-[36px] h-[36px] rounded-full p-[2px] ${latestSpark.status === 'pending' ? 'border-2 border-dashed border-white/40 bg-transparent' : ringClass} absolute left-0 z-10`} style={latestSpark.status === 'pending' ? {} : ringStyle}>
-                      <div className="w-full h-full rounded-full bg-[#121212] overflow-hidden border border-[#121212]" style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }}>
-                        <img src={latestSpark.creator?.avatar || spark.user?.avatar || null} alt="Creator" className="w-full h-full object-cover" />
-                      </div>
-                    </div>
-                    <div className={`w-[36px] h-[36px] rounded-full p-[2px] ${latestSpark.status === 'pending' ? 'border-2 border-dashed border-white/40 bg-transparent' : ringClass} absolute left-[24px] z-20`} style={latestSpark.status === 'pending' ? {} : ringStyle}>
-                      <div className="w-full h-full rounded-full bg-[#121212] overflow-hidden border border-[#121212]" style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }}>
-                        <img src={latestSpark.collabPartner?.avatar || null} alt="Partner" className="w-full h-full object-cover" />
-                      </div>
-                    </div>
-                    <div className={`absolute -bottom-2 -right-1 bg-[#121212] rounded-full px-1.5 py-0.5 border border-white/20 z-30 ${latestSpark.status === 'pending' ? 'text-[10px] text-white/70' : 'text-[10px]'}`}>
-                      {latestSpark.status === 'pending' ? '⏳' : '👥'}
+          return (
+            <motion.div
+              key={`spark-row-item-${spark.id || spark.userId || index}_${index}`}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1, filter: hasViewed ? 'grayscale(0.3)' : 'grayscale(0)' }}
+              transition={{ type: "spring", damping: 15, delay: index * 0.05 + 0.1 }}
+              onClick={() => onSparkClick(spark)}
+              className={`flex flex-col items-center gap-1 min-w-[72px] shrink-0 cursor-pointer group relative ${activeUserId === spark.userId ? 'scale-110 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]' : ''} transition-all duration-300`}
+            >
+              <div className="relative">
+                {latestSpark.isCollab ? (
+                   <div className={`relative w-[60px] h-[36px] flex items-center justify-start mt-2 mb-2 ${latestSpark.status === 'pending' ? 'opacity-60' : ''}`}>
+                     <div className={`w-[36px] h-[36px] rounded-full p-[2px] ${latestSpark.status === 'pending' ? 'border-2 border-dashed border-white/40 bg-transparent' : ringClass} absolute left-0 z-10`} style={latestSpark.status === 'pending' ? {} : ringStyle}>
+                       <div className="w-full h-full rounded-full bg-[#121212] overflow-hidden border border-[#121212]" style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }}>
+                         <img src={latestSpark.creator?.avatar || spark.user?.avatar || null} alt="Creator" className="w-full h-full object-cover" />
+                       </div>
+                     </div>
+                     <div className={`w-[36px] h-[36px] rounded-full p-[2px] ${latestSpark.status === 'pending' ? 'border-2 border-dashed border-white/40 bg-transparent' : ringClass} absolute left-[24px] z-20`} style={latestSpark.status === 'pending' ? {} : ringStyle}>
+                       <div className="w-full h-full rounded-full bg-[#121212] overflow-hidden border border-[#121212]" style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }}>
+                         <img src={latestSpark.collabPartner?.avatar || null} alt="Partner" className="w-full h-full object-cover" />
+                       </div>
+                     </div>
+                     <div className={`absolute -bottom-2 -right-1 bg-[#121212] rounded-full px-1.5 py-0.5 border border-white/20 z-30 ${latestSpark.status === 'pending' ? 'text-[10px] text-white/70' : 'text-[10px]'}`}>
+                       {latestSpark.status === 'pending' ? '⏳' : '👥'}
+                     </div>
+                   </div>
+                ) : (
+                  <div 
+                    className={`w-16 h-16 rounded-full p-[3px] ${ringClass}`}
+                    style={ringStyle}
+                  >
+                    <div 
+                      className={`w-full h-full rounded-full bg-[#121212] overflow-hidden border-2 border-[#121212] ${hasViewed ? 'opacity-50' : 'opacity-100'}`}
+                      style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }}
+                    >
+                      <img src={spark.user?.avatar || null} alt={spark.user?.displayName} className="w-full h-full object-cover" />
                     </div>
                   </div>
-               ) : (
-                 <div 
-                   className={`w-16 h-16 rounded-full p-[3px] ${ringClass}`}
-                   style={ringStyle}
-                 >
-                   <div 
-                     className={`w-full h-full rounded-full bg-[#121212] overflow-hidden border-2 border-[#121212] ${hasViewed ? 'opacity-50' : 'opacity-100'}`}
-                     style={{ animation: hasViewed ? 'none' : `spin ${getEnergyAnimationDuration(sparkEnergy)} linear infinite reverse` }} // Reverse spin to keep image upright
-                   >
-                     <img src={spark.user?.avatar || null} alt={spark.user?.displayName} className="w-full h-full object-cover" />
-                   </div>
-                 </div>
-               )}
+                )}
 
-               {/* Badges */}
-               {isNova && !hasViewed && !isExpiringSoon && (
-                 <div className="absolute -top-1 -right-1 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
-                   <Zap className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-                 </div>
-               )}
-               {false && (
-                 <div className="absolute -bottom-1 -right-1 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
-                   <ImageIcon className="w-3 h-3 text-[#00F0FF]" />
-                 </div>
-               )}
-               {false && (
-                 <div className="absolute -bottom-1 -right-1 bg-black/80 backdrop-blur-md rounded-full px-1.5 py-0.5 border border-white/20 z-10 shadow-lg flex items-center gap-1 justify-center">
-                   <Video className="w-3 h-3 text-[#FF2D87]" />
-                   {latestSpark.duration && <span className="text-[9px] font-bold text-white">0:{latestSpark.duration.toString().padStart(2, '0')}</span>}
-                 </div>
-               )}
-               {latestSpark.isChallenge && !hasViewed && !isExpiringSoon && (
-                 <div className="absolute -top-1 right-3 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
-                   <Target className="w-2.5 h-2.5 text-orange-500" />
-                 </div>
-               )}
-               {latestSpark.isCollab && !hasViewed && !isExpiringSoon && (
-                 <div className="absolute bottom-0 right-0 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
-                   <Users className="w-2.5 h-2.5 text-purple-400" />
-                 </div>
-               )}
-             </div>
-             <div className="flex flex-col items-center mt-1">
-               <span className={`text-[10px] font-medium truncate w-[68px] text-center ${hasViewed ? 'text-gray-500' : 'text-white'}`}>
-                 {latestSpark.isCollab ? `${(latestSpark.creator?.username || spark.user?.username)?.replace('@', '')} + ${(latestSpark.collabPartner?.username)?.replace('@', '')}` : spark.user?.username}
-               </span>
-               {countdownText && !hasViewed && (
-                 <span className={`text-[10px] font-bold ${isExpiringVerySoon ? (isExpiringImminent ? 'text-red-500 ' : 'text-red-400') : 'text-orange-400'}`}
-                       style={isExpiringVerySoon ? { animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}}>
-                   {countdownText}
-                 </span>
-               )}
-             </div>
-           </motion.div>
-         );
-      })}
+                {/* Badges */}
+                {isNova && !hasViewed && !isExpiringSoon && (
+                  <div className="absolute -top-1 -right-1 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
+                    <Zap className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
+                  </div>
+                )}
+                {latestSpark.isChallenge && !hasViewed && !isExpiringSoon && (
+                  <div className="absolute -top-1 right-3 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
+                    <Target className="w-2.5 h-2.5 text-orange-500" />
+                  </div>
+                )}
+                {latestSpark.isCollab && !hasViewed && !isExpiringSoon && (
+                  <div className="absolute bottom-0 right-0 bg-black/80 backdrop-blur-md rounded-full p-1 border border-white/20 z-10 shadow-lg flex items-center justify-center">
+                    <Users className="w-2.5 h-2.5 text-purple-400" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-center mt-1">
+                <span className={`text-[10px] font-medium truncate w-[68px] text-center ${hasViewed ? 'text-gray-500' : 'text-white'}`}>
+                  {latestSpark.isCollab ? `${(latestSpark.creator?.username || spark.user?.username)?.replace('@', '')} + ${(latestSpark.collabPartner?.username)?.replace('@', '')}` : spark.user?.username}
+                </span>
+                {countdownText && !hasViewed && (
+                  <span className={`text-[10px] font-bold ${isExpiringVerySoon ? (isExpiringImminent ? 'text-red-500 ' : 'text-red-400') : 'text-orange-400'}`}
+                        style={isExpiringVerySoon ? { animation: 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}}>
+                  {countdownText}
+                  </span>
+                )}
+              </div>
+            </motion.div>
+          );
+        })
+      )}
     </div>
   );
 }

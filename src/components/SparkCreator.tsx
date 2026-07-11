@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Type, Camera, Image as ImageIcon, Sparkles, Wand2, Plus, Globe, Users, Music, HelpCircle, BarChart3, Link2, Timer, Repeat, Star, Check, Smile } from 'lucide-react';
 import { SKRIM_REACTIONS, mockUsers } from '../lib/mock/mockData';
@@ -64,6 +64,23 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
   const [isChallenge, setIsChallenge] = useState(false);
   const [isCollab, setIsCollab] = useState(false);
   const [collabPartner, setCollabPartner] = useState<any>(null);
+  const [asyncMockUsers, setAsyncMockUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchUsers = async () => {
+      setLoadingUsers(true);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      if (active) {
+        setAsyncMockUsers(mockUsers);
+        setLoadingUsers(false);
+      }
+    };
+    fetchUsers();
+    return () => { active = false; };
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const [mood, setMood] = useState('🔥 Trending');
@@ -454,7 +471,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
   };
 
   const filteredMentions = suggestionType === 'mention' 
-    ? mockUsers.filter(u => u.username?.toLowerCase().includes(suggestionQuery) || (u.displayName || '').toLowerCase().includes(suggestionQuery)).slice(0, 5)
+    ? asyncMockUsers.filter(u => u.username?.toLowerCase().includes(suggestionQuery) || (u.displayName || '').toLowerCase().includes(suggestionQuery)).slice(0, 5)
     : [];
 
   const filteredHashtags = suggestionType === 'hashtag'
@@ -729,7 +746,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
                          />
                          <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto no-scrollbar">
                            <span className="text-[10px] text-white/50 font-bold mb-1">Suggestions</span>
-                           {mockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(u => (
+                           {asyncMockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 3).map(u => (
                              <button 
                                key={u.id}
                                onClick={() => setCollabPartner(u)}
@@ -1177,7 +1194,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
                       className="w-full bg-black border border-[#222] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#3B82F6]/50 transition-colors mb-3 shadow-inner"
                     />
                     <div className="flex flex-col gap-1 max-h-[160px] overflow-y-auto no-scrollbar">
-                      {mockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 4).map(u => (
+                      {asyncMockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 4).map(u => (
                         <button 
                           key={u.id}
                           onClick={() => setCollabPartner(u)}
@@ -1225,7 +1242,7 @@ export function SparkCreator({ isOpen, onClose, onPost, respondingToChallenge, r
             </div>
             <input type="text" placeholder="Search users..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-[#111] border border-[#333] rounded-2xl px-4 py-4 text-white mb-6 focus:outline-none focus:border-[#B026FF] shadow-inner" />
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 no-scrollbar">
-              {mockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
+              {asyncMockUsers.filter(u => u.username?.toLowerCase().includes(searchQuery.toLowerCase())).map(u => (
                 <button key={u.id} onClick={() => {
                    if (!imageTaggedUsers.find(x => x.username === u.username)) {
                      setImageTaggedUsers([...imageTaggedUsers, { username: u.username, position: { x: 50, y: 50 }, avatar: u.avatar }]);

@@ -18,6 +18,30 @@ export function ReactionRow({
   const [counts, setCounts] = useState<Record<string, number>>(initialReactions || {});
   const [showWhoReacted, setShowWhoReacted] = useState<string | null>(null);
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [loadingWhoReacted, setLoadingWhoReacted] = useState(false);
+  const [asyncReactors, setAsyncReactors] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (showWhoReacted) {
+      let active = true;
+      setLoadingWhoReacted(true);
+      const load = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        if (active) {
+          setAsyncReactors([
+            { id: "1", username: "raju_3idiots_fan", avatar: "https://i.pravatar.cc/150?img=1" },
+            { id: "2", username: "dolly_ka_dhaba", avatar: "https://i.pravatar.cc/150?img=2" },
+            { id: "3", username: "chikoo_official", avatar: "https://i.pravatar.cc/150?img=3" },
+          ]);
+          setLoadingWhoReacted(false);
+        }
+      };
+      load();
+      return () => { active = false; };
+    } else {
+      setAsyncReactors([]);
+    }
+  }, [showWhoReacted]);
 
   // Re-sync when the post's persisted reaction data changes from outside
   // (e.g. loaded from storage on mount, or updated by the long-press picker
@@ -202,23 +226,26 @@ export function ReactionRow({
                         ✕
                       </button>
                     </div>
-                    <div className="p-4 flex flex-col gap-3 max-h-[60vh] overflow-y-auto no-scrollbar">
-                      <div className="flex items-center gap-3">
-                        <img src="https://i.pravatar.cc/150?img=1" alt="avatar" className="w-8 h-8 rounded-full border border-[#222]" />
-                        <span className="text-sm font-bold text-white">@raju_3idiots_fan</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <img src="https://i.pravatar.cc/150?img=2" alt="avatar" className="w-8 h-8 rounded-full border border-[#222]" />
-                        <span className="text-sm font-bold text-white">@dolly_ka_dhaba</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <img src="https://i.pravatar.cc/150?img=3" alt="avatar" className="w-8 h-8 rounded-full border border-[#222]" />
-                        <span className="text-sm font-bold text-white">@chikoo_official</span>
-                      </div>
-                      {count > 3 && (
-                        <div className="pt-2 text-xs font-bold text-white/40 text-center">
-                          + {(count - 3).toLocaleString()} others
+                     <div className="p-4 flex flex-col gap-3 max-h-[60vh] overflow-y-auto no-scrollbar min-h-[150px] justify-center">
+                      {loadingWhoReacted ? (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin mb-2" />
+                          <p className="text-[10px] text-white/40 font-mono tracking-wider">RETRIEVING REACTORS...</p>
                         </div>
+                      ) : (
+                        <>
+                          {asyncReactors.map((reactor) => (
+                            <div key={reactor.id} className="flex items-center gap-3">
+                              <img src={reactor.avatar} alt="avatar" className="w-8 h-8 rounded-full border border-[#222]" />
+                              <span className="text-sm font-bold text-white">@{reactor.username}</span>
+                            </div>
+                          ))}
+                          {count > 3 && (
+                            <div className="pt-2 text-xs font-bold text-white/40 text-center">
+                              + {(count - 3).toLocaleString()} others
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </>

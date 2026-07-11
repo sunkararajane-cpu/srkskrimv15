@@ -65,9 +65,23 @@ export function StepTargeting({ targeting, onChange }: StepTargetingProps) {
   const [countries, setCountries] = useState<CountryOption[]>([]);
   const [states, setStates] = useState<StateOption[]>([]);
   const [cities, setCities] = useState<string[]>([]);
+  const [loadingMetadata, setLoadingMetadata] = useState(true);
+  const [asyncInterests, setAsyncInterests] = useState<string[]>([]);
+  const [asyncLanguages, setAsyncLanguages] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
+    const fetchMetadata = async () => {
+      setLoadingMetadata(true);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (!cancelled) {
+        setAsyncInterests(INTERESTS);
+        setAsyncLanguages(LANGUAGES);
+        setLoadingMetadata(false);
+      }
+    };
+    fetchMetadata();
+
     import('country-state-city').then((mod) => {
       if (cancelled) return;
       cscModule.current = mod;
@@ -240,49 +254,65 @@ export function StepTargeting({ targeting, onChange }: StepTargetingProps) {
       {/* Interests */}
       <div>
         <label className="text-[11px] font-bold text-gray-400 uppercase mb-2 block">Interests</label>
-        <div className="flex flex-wrap gap-2">
-          {INTERESTS.map((interest) => {
-            const active = targeting.interests.includes(interest);
-            return (
-              <button
-                key={interest}
-                onClick={() => toggleInterest(interest)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  active ? 'bg-neon-purple/20 border border-neon-purple text-neon-purple shadow-[0_0_8px_rgba(176,38,255,0.4)]' : 'bg-skrim-surface border border-white/10 text-gray-400'
-                }`}
-              >
-                {interest}
-              </button>
-            );
-          })}
-        </div>
+        {loadingMetadata ? (
+          <div className="flex items-center gap-2 py-2">
+            <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin" />
+            <span className="text-[10px] text-gray-500 font-mono">LOADING INTERESTS...</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {asyncInterests.map((interest) => {
+              const active = targeting.interests.includes(interest);
+              return (
+                <button
+                  key={interest}
+                  id={`interest-${interest}`}
+                  onClick={() => toggleInterest(interest)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    active ? 'bg-neon-purple/20 border border-neon-purple text-neon-purple shadow-[0_0_8px_rgba(176,38,255,0.4)]' : 'bg-skrim-surface border border-white/10 text-gray-400'
+                  }`}
+                >
+                  {interest}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Language */}
       <div>
         <label className="text-[11px] font-bold text-gray-400 uppercase mb-2 block">Language</label>
-        <div className="flex flex-wrap gap-2">
-          {LANGUAGES.map((lang) => {
-            const active = targeting.languages.includes(lang);
-            return (
-              <button
-                key={lang}
-                onClick={() => {
-                  const has = targeting.languages.includes(lang);
-                  onChange({
-                    ...targeting,
-                    languages: has ? targeting.languages.filter((l) => l !== lang) : [...targeting.languages, lang],
-                  });
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  active ? 'bg-neon-blue/20 border border-neon-blue text-neon-blue' : 'bg-skrim-surface border border-white/10 text-gray-400'
-                }`}
-              >
-                {lang}
-              </button>
-            );
-          })}
-        </div>
+        {loadingMetadata ? (
+          <div className="flex items-center gap-2 py-2">
+            <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-neon-blue animate-spin" />
+            <span className="text-[10px] text-gray-500 font-mono">LOADING LANGUAGES...</span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {asyncLanguages.map((lang) => {
+              const active = targeting.languages.includes(lang);
+              return (
+                <button
+                  key={lang}
+                  id={`lang-${lang}`}
+                  onClick={() => {
+                    const has = targeting.languages.includes(lang);
+                    onChange({
+                      ...targeting,
+                      languages: has ? targeting.languages.filter((l) => l !== lang) : [...targeting.languages, lang],
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    active ? 'bg-neon-blue/20 border border-neon-blue text-neon-blue' : 'bg-skrim-surface border border-white/10 text-gray-400'
+                  }`}
+                >
+                  {lang}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <p className="text-[10px] text-gray-500 mt-1.5">Leave blank to reach people in all languages.</p>
       </div>
 

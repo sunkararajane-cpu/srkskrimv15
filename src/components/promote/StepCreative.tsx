@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X as XIcon } from 'lucide-react';
 import { USER_CONTENT, AdDraft, AD_GOALS, AdGoalId } from '../../lib/mock/monetizationMockData';
 import { formatCompact } from '../../hooks/useCountUp';
@@ -26,17 +26,33 @@ export function StepCreative({
   onSelectCreative, onHeadlineChange, onUploadedMediaChange, onGoalChange, onDestinationChange, onCtaChange,
 }: StepCreativeProps) {
   const [source, setSource] = useState<'existing' | 'upload'>('existing');
+  const [loading, setLoading] = useState(true);
+  const [asyncUserContent, setAsyncUserContent] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isCarousel = format === 'carousel';
 
-  const filtered = USER_CONTENT.filter((c) => {
+  useEffect(() => {
+    let active = true;
+    const fetchContent = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (active) {
+        setAsyncUserContent(USER_CONTENT);
+        setLoading(false);
+      }
+    };
+    fetchContent();
+    return () => { active = false; };
+  }, []);
+
+  const filtered = asyncUserContent.filter((c) => {
     if (format === 'video') return c.type === 'reel';
     if (format === 'story') return c.type === 'story' || c.type === 'reel';
     return c.type === 'post' || c.type === 'reel';
   });
 
-  const existingSelected = USER_CONTENT.find((c) => c.id === creativeId);
+  const existingSelected = asyncUserContent.find((c) => c.id === creativeId);
   const hasUpload = uploadedMedia.length > 0;
   // What's shown in the preview: uploaded media takes priority if present, else existing content selection
   const previewThumbnail = hasUpload ? uploadedMedia[0] : existingSelected?.thumbnail;
@@ -100,18 +116,26 @@ export function StepCreative({
       </div>
 
       {source === 'existing' ? (
-        <div className="grid grid-cols-3 gap-2">
-          {filtered.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => { onSelectCreative(c.id); onUploadedMediaChange([]); }}
-              className={`relative aspect-square rounded-xl overflow-hidden border-2 ${creativeId === c.id && !hasUpload ? 'border-neon-purple' : 'border-transparent'}`}
-            >
-              <img src={c.thumbnail || null} alt="" className="w-full h-full object-cover" />
-              {creativeId === c.id && !hasUpload && <div className="absolute inset-0 bg-neon-purple/20" />}
-            </button>
-          ))}
-        </div>
+        loading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center col-span-3">
+            <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-3" />
+            <p className="text-[11px] text-gray-500 font-mono tracking-wider">RETRIEVING YOUR POSTS...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {filtered.map((c) => (
+              <button
+                key={c.id}
+                id={`creative-${c.id}`}
+                onClick={() => { onSelectCreative(c.id); onUploadedMediaChange([]); }}
+                className={`relative aspect-square rounded-xl overflow-hidden border-2 ${creativeId === c.id && !hasUpload ? 'border-neon-purple' : 'border-transparent'}`}
+              >
+                <img src={c.thumbnail || null} alt="" className="w-full h-full object-cover" />
+                {creativeId === c.id && !hasUpload && <div className="absolute inset-0 bg-neon-purple/20" />}
+              </button>
+            ))}
+          </div>
+        )
       ) : (
         <div className="flex flex-col gap-2">
           <input

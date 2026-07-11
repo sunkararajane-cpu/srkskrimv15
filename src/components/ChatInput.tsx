@@ -44,6 +44,7 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
   const [slowModeRemaining, setSlowModeRemaining] = useState(0);
   const slowModeTimerRef = useRef<any>(null);
   
+  const [isCheckingMic, setIsCheckingMic] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -91,30 +92,42 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
 
   const startRecording = async () => {
     if (text.length > 0) return;
+    setIsCheckingMic(true);
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      console.warn("Could not retrieve microphone stream:", err);
+    }
+    setIsCheckingMic(false);
+
     setIsRecording(true);
     setIsRecordingLocked(false);
     setRecordingTime(0);
     setLiveWaveform(Array(20).fill(0.1));
     audioChunksRef.current = [];
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const options = MediaRecorder.isTypeSupported('audio/webm') 
-        ? { mimeType: 'audio/webm' } 
-        : { mimeType: 'audio/ogg' };
-      
-      const mediaRecorder = new MediaRecorder(stream, options);
-      mediaRecorderRef.current = mediaRecorder;
+    if (stream) {
+      try {
+        const options = MediaRecorder.isTypeSupported('audio/webm') 
+          ? { mimeType: 'audio/webm' } 
+          : { mimeType: 'audio/ogg' };
+        
+        const mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
 
-      mediaRecorder.start(100);
-    } catch (err) {
-      console.warn("Could not start microphone recording:", err);
+        mediaRecorder.start(100);
+      } catch (err) {
+        console.warn("Could not start MediaRecorder:", err);
+        mediaRecorderRef.current = null;
+      }
+    } else {
       mediaRecorderRef.current = null;
     }
 
@@ -536,6 +549,10 @@ export function ChatInput({ currentMood, onSetMood, onSendMessage, onSendVoice, 
               <AnimatePresence mode="popLayout">
                 {slowModeRemaining > 0 ? (
                   <motion.span key="cooldown" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="text-[11px] font-bold text-white/50">{slowModeRemaining}s</motion.span>
+                ) : isCheckingMic ? (
+                  <motion.div key="checking" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                    <div className="w-5 h-5 rounded-full border border-white/20 border-t-[#B026FF] animate-spin" />
+                  </motion.div>
                 ) : text.trim() ? (
                   <motion.div key="send" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: 'spring' }}>
                     <Zap size={20} className="fill-white drop-shadow-md" />

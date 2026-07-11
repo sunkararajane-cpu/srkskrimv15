@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clapperboard, Image as ImageIcon, Star, Layers, Check } from 'lucide-react';
 import type { AdDraft } from '../../lib/mock/monetizationMockData';
 
@@ -15,6 +15,28 @@ interface StepFormatProps {
 }
 
 export function StepFormat({ value, onSelect }: StepFormatProps) {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchFormats = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      if (active) setLoading(false);
+    };
+    fetchFormats();
+    return () => { active = false; };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-6 h-6 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-3" />
+        <p className="text-xs text-gray-500 font-mono tracking-wider">RETRIEVING AD FORMATS...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-lg font-bold text-white mb-1">Choose ad format</h2>
@@ -24,6 +46,7 @@ export function StepFormat({ value, onSelect }: StepFormatProps) {
         return (
           <button
             key={f.id}
+            id={`format-${f.id}`}
             onClick={() => onSelect(f.id)}
             className={`text-left p-4 rounded-2xl border transition-all relative ${
               selected ? 'border-neon-purple bg-neon-purple/10 scale-[1.02]' : 'border-white/5 bg-skrim-surface'
@@ -44,3 +67,4 @@ export function StepFormat({ value, onSelect }: StepFormatProps) {
     </div>
   );
 }
+

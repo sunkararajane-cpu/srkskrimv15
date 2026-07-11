@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { AdDraft, USER_CONTENT, computeAdCost } from '../../lib/mock/monetizationMockData';
 
@@ -8,8 +8,36 @@ interface LaunchCeremonyProps {
 }
 
 export function LaunchCeremony({ draft, onViewCampaign }: LaunchCeremonyProps) {
+  const [provisioning, setProvisioning] = useState(true);
+  const [provisionStep, setProvisionStep] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const runSteps = async () => {
+      if (active) setProvisionStep(1);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (active) setProvisionStep(2);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (active) setProvisioning(false);
+    };
+    runSteps();
+    return () => { active = false; };
+  }, []);
+
   const content = USER_CONTENT.find((c) => c.id === draft.creativeId);
   const total = computeAdCost(draft.targeting.scope, draft.duration || 1);
+
+  if (provisioning) {
+    return (
+      <div className="fixed inset-0 z-[300] bg-[#05050A] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+        <div className="w-12 h-12 rounded-full border-2 border-white/20 border-t-neon-purple animate-spin mb-6" />
+        <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono mb-2">
+          {provisionStep === 1 ? 'PROVISIONING AD SPACE...' : 'DISTRIBUTING CREATIVE TO REGIONS...'}
+        </h3>
+        <p className="text-xs text-gray-500 font-mono">ESTABLISHING DIRECT INGRESS...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[300] bg-[#05050A] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
@@ -62,6 +90,7 @@ export function LaunchCeremony({ draft, onViewCampaign }: LaunchCeremonyProps) {
       </motion.div>
 
       <motion.button
+        id="btn-view-campaign"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.7 }}
@@ -73,3 +102,4 @@ export function LaunchCeremony({ draft, onViewCampaign }: LaunchCeremonyProps) {
     </div>
   );
 }
+
