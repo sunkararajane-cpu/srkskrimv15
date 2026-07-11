@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Lock } from 'lucide-react';
-import { mockPayment } from '../lib/mock/mockPayments';
+import { getConfig } from '../lib/runtimeConfig';
+import { apiClient } from '../lib/apiClient';
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export type PaymentMethodId = 'upi' | 'card' | 'coins';
 
@@ -92,18 +107,87 @@ export function SharedPaymentModal({
     if (!canPay) return;
     setPhase('processing');
 
-    let outcome: 'success' | 'failure';
-    if (forceOutcome) {
-      outcome = forceOutcome;
-    } else {
-      const res = await mockPayment(amount * 100, preview.title);
-      outcome = res.success ? 'success' : 'failure';
-      if (!res.success && res.error) setReason(res.error);
-    }
+    try {
+      const config = await getConfig();
+      const isScriptLoaded = await loadRazorpayScript();
+      if (!isScriptLoaded) {
+        throw new Error("Failed to load Razorpay Checkout SDK. Please check your internet connection.");
+      }
 
-    setTimeout(() => {
-      setPhase(outcome === 'success' ? 'success' : 'failed');
-    }, 1300);
+      if (method === 'coins') {
+        // Coins flow - calls the real backend coins payment endpoint
+        await apiClient.post('/payments/pay-with-coins', {
+          amount: amount,
+          purpose: preview.title
+        });
+        setPhase('success');
+        return;
+      }
+
+      // Call Lambda via apiClient to create Razorpay Order
+      let order: any;
+      try {
+        order = await apiClient.post<any>('/payments/create-order', {
+          amount: Math.round(amount * 100), // convert to paise
+          currency: 'INR',
+          purpose: preview.title
+        });
+      } catch (e) {
+        console.warn("apiClient /payments/create-order failed or not ready. Using local fallback order for Razorpay checkout.", e);
+        // fallback in case backend is not ready yet
+        order = {
+          id: `order_fallback_${Date.now()}`,
+          amount: Math.round(amount * 100),
+          currency: 'INR'
+        };
+      }
+
+      const options = {
+        key: config.razorpayKeyId || 'rzp_test_placeholder',
+        amount: order.amount,
+        currency: order.currency,
+        name: 'SkrimChat',
+        description: preview.title,
+        order_id: order.id.startsWith('order_fallback') ? undefined : order.id,
+        handler: async function (response: any) {
+          try {
+            // Verify via apiClient -> Lambda
+            await apiClient.post('/payments/verify', {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id || order.id,
+              razorpay_signature: response.razorpay_signature
+            });
+
+            setPhase('success');
+          } catch (verifyError: any) {
+            console.error("Payment verification failed via apiClient:", verifyError);
+            setReason(verifyError.message || "Payment verification failed. Please try again.");
+            setPhase('failed');
+          }
+        },
+        prefill: {
+          name: '',
+          email: '',
+          contact: ''
+        },
+        theme: {
+          color: '#B026FF'
+        },
+        modal: {
+          ondismiss: function () {
+            setPhase('selection');
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+    } catch (err: any) {
+      console.error("Razorpay initiation failed:", err);
+      setReason(err.message || "Could not launch Razorpay checkout.");
+      setPhase('failed');
+    }
   };
 
   return (
