@@ -14,8 +14,44 @@ import {
 import { likePost } from '../lib/mock/mockServices';
 import { useNotificationStore } from '../store/notificationStore';
 import { getMutedUsers, getBlockedUsers, getPostModerationSettings, savePostModerationSettings } from '../lib/mock/mockSocialGraph';
-import { getPollState, castVote, type PollState } from '../lib/firebase/polls';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+
+interface PollState {
+  voterIds: Record<string, number>;
+  votesByOption: number[];
+}
+
+async function getPollState(postId: string, options: string[]): Promise<PollState> {
+  const key = `poll_state_${postId}`;
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (_) {}
+  }
+  const votesByOption = (options || []).map(() => 0);
+  const poll = { voterIds: {}, votesByOption };
+  localStorage.setItem(key, JSON.stringify(poll));
+  return poll;
+}
+
+async function castVote(postId: string, options: string[], voterId: string, optionIndex: number): Promise<PollState> {
+  const key = `poll_state_${postId}`;
+  const poll = await getPollState(postId, options);
+  
+  const previousVote = poll.voterIds[voterId];
+  if (previousVote !== undefined) {
+    poll.votesByOption[previousVote] = Math.max(0, poll.votesByOption[previousVote] - 1);
+  }
+  
+  poll.voterIds[voterId] = optionIndex;
+  poll.votesByOption[optionIndex] = (poll.votesByOption[optionIndex] || 0) + 1;
+  
+  localStorage.setItem(key, JSON.stringify(poll));
+  
+  window.dispatchEvent(new Event('skrimchat_poll_updated'));
+  return poll;
+}
 import { motion, AnimatePresence } from 'motion/react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { SKRIM_REACTIONS } from '../lib/mock/mockData';
@@ -423,10 +459,10 @@ function TextPost({ post, onLike, onComment, onShare, onSave, onReact, navigate,
 // ─── Poll card ──────────────────────────────────────────────────
 // A poll post is its own type ('poll') rather than a text-post variant,
 // since it needs vote state (per-option counts + "did I already vote")
-// that lives in Firestore (lib/firebase/polls.ts), not just local post
+// that lives in local persistence, not just local post
 // fields. Votes are fetched once on mount and refreshed on the
 // 'skrimchat_poll_updated' event so a vote made elsewhere (or by the
-// local-storage fallback when Firestore isn't configured) shows up live.
+// local-storage fallback) shows up live.
 function PollPost({ post, onLike, onComment, onShare, onSave, navigate, currentUser, onMediaClick }: any) {
   const [poll, setPoll] = useState<PollState | null>(null);
   const [voting, setVoting] = useState(false);

@@ -22,7 +22,6 @@
     "country-state-city": "^3.2.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "firebase": "^12.14.0",
     "jsqr": "^1.4.0",
     "libsodium-wrappers": "^0.8.4",
     "lucide-react": "^0.546.0",

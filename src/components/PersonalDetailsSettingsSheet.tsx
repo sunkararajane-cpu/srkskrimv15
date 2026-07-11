@@ -3,13 +3,43 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, User as UserIcon, AtSign, Mail, Calendar, MapPin, Check, Loader2, ShieldCheck, Navigation } from 'lucide-react';
 import { COUNTRY_CODES } from '../constants/countryCodes';
 import { validateDOB, dobInputBounds } from '../lib/utils/age';
-import {
-  mockCheckUsernameAvailable,
-  mockCanChangeUsername,
-  mockSendEmailChangeOTP,
-  mockVerifyEmailChangeOTP,
-  mockUpdatePersonalDetails,
-} from '../lib/mock/mockAuth';
+
+function mockCanChangeUsername(lastChanged: number): { allowed: boolean; daysLeft: number } {
+  const cooldownPeriod = 14 * 24 * 60 * 60 * 1000;
+  const timePassed = Date.now() - lastChanged;
+  if (timePassed >= cooldownPeriod) {
+    return { allowed: true, daysLeft: 0 };
+  }
+  const remaining = Math.ceil((cooldownPeriod - timePassed) / (24 * 60 * 60 * 1000));
+  return { allowed: false, daysLeft: remaining };
+}
+
+async function mockCheckUsernameAvailable(username: string, userId: string): Promise<{ available: boolean; reason?: string }> {
+  if (username.length < 3) {
+    return { available: false, reason: 'Username too short' };
+  }
+  return { available: true };
+}
+
+async function mockSendEmailChangeOTP(email: string): Promise<void> {
+  // Simulator for OTP sending
+}
+
+async function mockVerifyEmailChangeOTP(otp: string): Promise<void> {
+  if (otp !== '123456') {
+    throw new Error('Invalid verification code. Enter 123456 for testing.');
+  }
+}
+
+async function mockUpdatePersonalDetails(userId: string, data: any): Promise<void> {
+  const stored = localStorage.getItem('skrimchat_user');
+  if (stored) {
+    const userObj = JSON.parse(stored);
+    const updated = { ...userObj, ...data };
+    localStorage.setItem('skrimchat_user', JSON.stringify(updated));
+    window.dispatchEvent(new Event('skrimchat_user_updated'));
+  }
+}
 
 interface Props {
   isOpen: boolean;

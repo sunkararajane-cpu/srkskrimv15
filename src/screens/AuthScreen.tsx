@@ -3,15 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from '../store/authStore';
 import { NeonButton } from '../components/ui';
 import { Zap, Mail, AlertCircle, Phone, MessageCircle, Play, ChevronLeft, ChevronRight, ChevronDown, Camera, Image as ImageIcon, Pencil } from 'lucide-react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase/config';
 import { FEATURE_FLAGS } from '../lib/config/featureFlags';
-import { mockLogin, mockGoogleSignIn, mockSignup, mockOTPSend, mockOTPVerify } from '../lib/mock/mockAuth';
 import CountryCodePicker from '../components/CountryCodePicker';
 import { validateDOB, dobInputBounds } from '../lib/utils/age';
 
 export default function AuthScreen() {
-  const { setAuthenticated } = useAuthStore();
+  const { setAuthenticated, signIn, signUp, confirmSignUp } = useAuthStore();
   const [step, setStep] = useState<'splash' | 'onboarding' | 'login' | 'signup' | 'otp' | 'phone-login' | 'profile-setup' | 'forgot-password'>('splash');
   const [slideIndex, setSlideIndex] = useState(0);
   const [hasScrolled, setHasScrolled] = useState(false);
@@ -98,14 +95,8 @@ export default function AuthScreen() {
     setLoading(true);
     setError('');
     try {
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        await mockLogin(email, password);
-        setAuthenticated(true);
-      } else {
-        if (!auth) throw new Error("Firebase not initialized");
-        await signInWithEmailAndPassword(auth, email, password);
-        setAuthenticated(true);
-      }
+      await signIn(email, password);
+      setAuthenticated(true);
     } catch (err: any) {
       const msg = err?.message || "Something went wrong, please try again";
       setError(msg);
@@ -118,14 +109,7 @@ export default function AuthScreen() {
     setLoading(true);
     setError('');
     try {
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        await mockGoogleSignIn();
-        setAuthenticated(true);
-      } else {
-        if (!auth) throw new Error("Firebase not initialized");
-        await signInWithPopup(auth, googleProvider);
-        setAuthenticated(true);
-      }
+      setError("Google Login is not configured for Cognito in this build. Please use Email Sign In/Sign Up.");
     } catch (err: any) {
       setError("Something went wrong, please try again");
     } finally {
@@ -153,18 +137,15 @@ export default function AuthScreen() {
     }
 
     try {
-       if (FEATURE_FLAGS.MOCK_MODE) {
-         const user = await mockSignup(email, password, '@' + username, fullName, phone, dateOfBirth);
-         setPendingUser(user);
-         setResendTimer(30);
-         setTimeout(() => {
-           setAuthenticated(true);
-           setLoading(false);
-         }, 800);
-         return; // don't set loading to false in finally block
-       } else {
-         setError("Signup not fully implemented in non-mock mode yet.");
-       }
+      await signUp(username, password, email, {
+        name: fullName,
+        phone_number: phone.startsWith('+') ? phone : `${countryCode}${phone}`,
+        birthdate: dateOfBirth,
+      });
+      setPendingUser({ username, email });
+      setOtpSource('signup');
+      setResendTimer(30);
+      setStep('otp');
     } catch (err: any) {
       const msg = err?.message || "Something went wrong, please try again";
       setError(msg);
@@ -177,12 +158,7 @@ export default function AuthScreen() {
     setLoading(true);
     setError('');
     try {
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        await mockOTPSend(phone);
-        setStep('otp');
-      } else {
-        setError("Phone auth requires real Firebase setup.");
-      }
+      setError("SMS OTP flows require active Cognito phone setup. Please use Email Sign Up.");
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -200,30 +176,17 @@ export default function AuthScreen() {
     setLoading(true);
     setError('');
     try {
-      if (FEATURE_FLAGS.MOCK_MODE) {
-        await mockOTPVerify(otpValue, pendingUser);
+      if (otpSource === 'signup' && pendingUser) {
+        await confirmSignUp(pendingUser.username, otpValue);
         setOtpSuccess(true);
         setTimeout(() => {
-          if (otpSource === 'phone-login') {
-             const existingUsers = JSON.parse(localStorage.getItem('mock_db_users') || '[]');
-             const fullPhone = `${countryCode} ${phone}`;
-             const found = existingUsers.find((u: any) => u.phone === phone || u.phone === fullPhone);
-             if (found) {
-                localStorage.setItem("skrimchat_user", JSON.stringify(found));
-                setAuthenticated(true);
-             } else {
-                setStep('profile-setup');
-             }
-          } else {
-             setAuthenticated(true);
-          }
-        }, 1000);
-        return; // don't set loading to false in finally block
+          setStep('login');
+        }, 1200);
       } else {
-        setError("Firebase OTP not configured.");
+        setError("Invalid OTP source or session expired");
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Verification failed');
     } finally {
       if (!otpSuccess) setLoading(false);
     }
@@ -815,7 +778,6 @@ export default function AuthScreen() {
                         type="button"
                         onClick={() => {
                           setResendTimer(30);
-                          mockOTPSend(phone || '');
                         }}
                         className="text-neon-purple font-medium text-sm hover:underline"
                       >

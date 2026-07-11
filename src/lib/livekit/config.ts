@@ -3,7 +3,7 @@
 // Uses the `@livekit/components-react` and `livekit-client` libraries.
 
 export const LIVEKIT_CONFIG = {
-  serverUrl: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_LIVEKIT_URL) || "wss://skrimchat-mock.livekit.cloud",
+  serverUrl: (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.VITE_LIVEKIT_URL) || "wss://skrimchat-mock.livekit.cloud",
   // Token must be generated SECURELY on the backend using the LiveKit Node SDK.
   // Never expose your LiveKit ApiKey/Secret to the frontend!
   getTokenUrl: "/api/get-livekit-token" 
